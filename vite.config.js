@@ -24,7 +24,8 @@ function csp(env) {
   const ws = sb.replace(/^https:/, 'wss:');
   return [
     "default-src 'self'",
-    "script-src 'self'",
+    // En la APK, Capacitor inyecta su puente como script en línea; el contenido sigue siendo solo local
+    process.env.CAP === '1' ? "script-src 'self' 'unsafe-inline'" : "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
     `img-src 'self' data: blob:${sb ? ' ' + sb : ''}`,

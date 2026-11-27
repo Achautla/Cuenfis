@@ -1,26 +1,66 @@
 // Avisos del dispositivo. Sin servidor de notificaciones push todavía: se muestran al abrir la app
 // (y al volver a ella), una sola vez por aviso y por día.
 import { recordatorios } from '../core/recordatorios.js';
+import { nativo } from '../native.js';
 
 const CLAVE = 'cuenfis:avisados';
 const PREF = 'cuenfis:notif';
+const pref = () => { try { return localStorage.getItem(PREF) === '1'; } catch { return false; } };
 
-export const soportadas = () => 'Notification' in window;
-export const activas = () => soportadas() && Notification.permission === 'granted' && localStorage.getItem(PREF) === '1';
+export const soportadas = () => nativo || 'Notification' in window;
+export const activas = () => (nativo ? pref() : soportadas() && Notification.permission === 'granted' && pref());
+
+const LN = () => import('@capacitor/local-notifications').then((m) => m.LocalNotifications);
+const idNum = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h) % 2_000_000_000; };
+
+// En Android, tocar una notificación lleva a su pantalla
+if (nativo) LN().then((ln) => ln.addListener('localNotificationActionPerformed', (a) => { const r = a.notification?.extra?.ruta; if (r) location.hash = `#/${r}`; })).catch(() => {});
 
 export async function activar() {
+  if (nativo) {
+    const ln = await LN();
+    const p = (await ln.checkPermissions()).display === 'granted' ? 'granted' : (await ln.requestPermissions()).display;
+    if (p === 'granted') localStorage.setItem(PREF, '1');
+    return p === 'granted' ? 'granted' : 'denied';
+  }
   if (!soportadas()) return 'no-soportado';
   const p = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
   if (p === 'granted') localStorage.setItem(PREF, '1');
   return p;
 }
-export function desactivar() { localStorage.setItem(PREF, '0'); }
+export async function desactivar() {
+  localStorage.setItem(PREF, '0');
+  if (nativo) { const ln = await LN(); const { notifications } = await ln.getPending(); if (notifications.length) await ln.cancel({ notifications }); }
+}
+
+/** Android: programa los avisos aunque la app esté cerrada (a las 9:00 de su fecha, o en unos segundos si ya toca hoy). */
+async function programarNativo(lista, ya, hoy) {
+  const ln = await LN();
+  const { notifications: pend } = await ln.getPending();
+  if (pend.length) await ln.cancel({ notifications: pend });
+  const ahora = Date.now();
+  const nuevas = [];
+  for (const r of lista) {
+    const [y, m, d] = r.fecha.split('-').map(Number);
+    const nueve = new Date(y, m - 1, d - (r.fecha > hoy ? 1 : 0), 9, 0, 0).getTime(); // un día antes de la fecha límite
+    let at = null;
+    if (nueve > ahora + 60_000) at = new Date(nueve);
+    else if (ya[r.id] !== hoy) { at = new Date(ahora + 3000); ya[r.id] = hoy; }
+    if (at) nuevas.push({ id: idNum(r.id), title: r.titulo, body: r.texto, schedule: { at, allowWhileIdle: true }, extra: { ruta: r.ruta } });
+  }
+  if (nuevas.length) await ln.schedule({ notifications: nuevas.slice(0, 20) });
+}
 
 export async function revisar(estado, foto) {
   if (!activas() || !estado.perfil) return;
   const hoy = foto.hoy;
   let ya = {};
   try { ya = JSON.parse(localStorage.getItem(CLAVE)) ?? {}; } catch { /* */ }
+  if (nativo) {
+    await programarNativo(recordatorios(estado, foto).filter((r) => r.nivel !== 'info'), ya, hoy);
+    try { localStorage.setItem(CLAVE, JSON.stringify(ya)); } catch { /* */ }
+    return;
+  }
   const lista = recordatorios(estado, foto).filter((r) => r.nivel !== 'info' && ya[r.id] !== hoy);
   if (!lista.length) return;
   const reg = await navigator.serviceWorker?.getRegistration?.().catch(() => null);

@@ -40,6 +40,7 @@ import * as nube from './data/nube.js';
 import { recordatorios } from './core/recordatorios.js';
 import { revisar as revisarAvisos } from './ui/notificaciones.js';
 import { getFoto } from './data/store.js';
+import { nativo } from './native.js';
 
 // p: aparece en la barra inferior del celular; el resto va en "Más". g: grupo del menú. ver: cuándo se muestra.
 const RUTAS = {
@@ -162,6 +163,18 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // Mantén a la vista qué regímenes están activos (accesible para estilos condicionales)
 document.documentElement.dataset.regs = regimenesEn(getEstado().perfil, hoyISO()).join(' ');
 
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+// Android: botón Atrás cierra primero lo que esté abierto (con sus candados), luego regresa de pantalla
+if (nativo) {
+  import('@capacitor/app').then(({ App }) => App.addListener('backButton', () => {
+    const conf = document.getElementById('dlgConf');
+    if (conf?.open) { conf.close(); return; }
+    const d = $('#dlg');
+    if (d?.open) { if (d.oncancel) d.oncancel(new Event('cancel', { cancelable: true })); else d.close(); return; }
+    const r = location.hash.replace(/^#\/?/, '').split('?')[0];
+    if (r && r !== 'inicio') history.back(); else App.exitApp();
+  })).catch(() => {});
+}
+
+if ('serviceWorker' in navigator && import.meta.env.PROD && !nativo) {
   window.addEventListener('load', () => navigator.serviceWorker.register(import.meta.env.BASE_URL + 'sw.js').catch(() => {}));
 }

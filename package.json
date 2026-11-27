@@ -7,7 +7,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "auditoria": "node scripts/auditoria.js"
+    "auditoria": "node scripts/auditoria.js",
+    "android": "CAP=1 vite build && cap sync android"
   },
   "repository": {
     "type": "git",
@@ -18,12 +19,19 @@
   },
   "homepage": "https://github.com/achautla/cuenfis#readme",
   "devDependencies": {
+    "@capacitor/cli": "^7.6.11",
     "vite": "^5.4.11",
     "vitest": "^2.1.8"
   },
   "private": true,
   "type": "module",
   "dependencies": {
+    "@capacitor/android": "^7.6.11",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/core": "^7.6.11",
+    "@capacitor/filesystem": "^7.1.9",
+    "@capacitor/local-notifications": "^7.0.7",
+    "@capacitor/share": "^7.0.4",
     "@fontsource/inter": "^5.1.0",
     "@fontsource/inter-tight": "^5.1.0",
     "@supabase/supabase-js": "^2.119.2",

@@ -4,7 +4,7 @@ import { REGIMENES } from '../data/catalogo.js';
 import { params } from '../core/fiscal.js';
 import { regimenesEnRango } from '../core/regimen.js';
 import { icon } from '../ui/icons.js';
-import { $, esc, money, pct, nombreMes, fechaLarga, toast } from '../ui/dom.js';
+import { $, esc, money, pct, nombreMes, fechaLarga, toast, descargar } from '../ui/dom.js';
 import { confirmar } from '../ui/confirmar.js';
 import * as nube from '../data/nube.js';
 import '../styles/views/declaracion.css';
@@ -44,7 +44,7 @@ function acuseHTML(clave) {
     </div>
     <div class="row">
       ${a.ruta ? `<button class="btn sm" id="verAcuse">${icon('download')}${esc(a.nombre ?? 'Ver acuse')}</button><button class="btn ghost sm" id="quitarAcuse">${icon('trash')}Quitar archivo</button>`
-        : a.archivo ? `<a class="btn sm" href="${a.archivo}" download="${esc(a.nombre ?? `acuse-${clave}`)}">${icon('download')}${esc(a.nombre ?? 'Descargar acuse')}</a><button class="btn ghost sm" id="quitarAcuse">${icon('trash')}Quitar archivo</button>`
+        : a.archivo ? `<button class="btn sm" id="bajarAcuse">${icon('download')}${esc(a.nombre ?? 'Descargar acuse')}</button><button class="btn ghost sm" id="quitarAcuse">${icon('trash')}Quitar archivo</button>`
         : `<label class="btn sm">${icon('upload')}Adjuntar PDF o foto<input type="file" id="fileAcuse" accept="application/pdf,image/*" hidden /></label><span class="small muted">${nube.getUsuario() ? 'Hasta 5 MB. Se guarda en tu nube privada.' : 'Hasta 1.5 MB. Se guarda en este dispositivo.'}</span>`}
     </div></div>`;
 }
@@ -63,6 +63,10 @@ function enlazarAcuse(main, clave) {
     if (!(await confirmar({ titulo: '¿Quitar el archivo del acuse?', accion: 'Quitar archivo', texto: `Se borra ${a.ruta ? 'de tu nube' : 'de este dispositivo'}. El número de operación se conserva. Si no tienes otra copia, puedes descargarla de nuevo del portal del SAT.` }))) return;
     if (a.ruta && nube.getUsuario()) { try { await nube.borrarAcuse(a.ruta); } catch { /* se limpia la referencia de todos modos */ } }
     guardar({ archivo: undefined, nombre: undefined, ruta: undefined }, 'Archivo quitado');
+  });
+  $('#bajarAcuse', main)?.addEventListener('click', async () => {
+    const a = getEstado().declaraciones?.[clave]?.acuse ?? {};
+    descargar(a.nombre ?? `acuse-${clave}.pdf`, await (await fetch(a.archivo)).blob(), a.tipo || 'application/pdf');
   });
   $('#verAcuse', main)?.addEventListener('click', async () => {
     const a = getEstado().declaraciones?.[clave]?.acuse ?? {};

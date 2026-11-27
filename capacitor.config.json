@@ -1,0 +1,9 @@
+{
+  "appId": "mx.cuenfis.app",
+  "appName": "Cuenfis",
+  "webDir": "dist",
+  "android": { "allowMixedContent": false },
+  "plugins": {
+    "LocalNotifications": { "smallIcon": "ic_stat_cuenfis", "iconColor": "#0f2a4a" }
+  }
+}

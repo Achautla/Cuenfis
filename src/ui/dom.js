@@ -1,4 +1,5 @@
 // Utilidades de DOM y formato.
+import { nativo, compartirArchivo } from '../native.js';
 export const $ = (s, el = document) => el.querySelector(s);
 export const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 
@@ -51,6 +52,7 @@ export function countTo(el, valor, fmt = money) {
 }
 
 export function descargar(nombre, contenido, tipo = 'text/plain') {
+  if (nativo) return compartirArchivo(nombre, contenido, tipo).catch((e) => { if (!/cancel/i.test(e?.message ?? '')) toast('No se pudo guardar el archivo. Inténtalo de nuevo.'); });
   const url = URL.createObjectURL(new Blob([contenido], { type: tipo }));
   const a = Object.assign(document.createElement('a'), { href: url, download: nombre });
   document.body.append(a); a.click(); a.remove();

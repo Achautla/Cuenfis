@@ -1,0 +1,30 @@
+name: APK Android
+# Compila la APK de Cuenfis (Capacitor) y la deja descargable en la pestaña Actions de cada ejecución.
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths-ignore: ['**.md']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21, cache: gradle }
+      - uses: android-actions/setup-android@v3
+      - run: npm ci
+      - run: npm test
+      - run: npm run android
+      - name: Compilar APK
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew --no-daemon assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cuenfis-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30

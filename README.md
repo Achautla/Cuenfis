@@ -83,3 +83,11 @@ del servidor en una fase posterior; hoy la fuente de verdad es el documento sinc
 ## Publicación (GitHub Pages)
 
 El flujo `.github/workflows/publicar.yml` prueba, construye y publica la app en GitHub Pages cada vez que algo llega a `main`. Una sola vez: en el repositorio, Settings → Pages → Source: **GitHub Actions**. La dirección será `https://achautla.github.io/Cuenfis/`; agrégala en Supabase → Authentication → URL Configuration (Site URL y Redirect URLs).
+
+## App Android (Capacitor)
+
+La APK se compila sola en GitHub Actions (flujo **APK Android**) y queda descargable como artefacto `cuenfis-apk` en cada ejecución. Para compilarla en tu computadora necesitas Android Studio: `npm run android` y luego abre la carpeta `android/`.
+
+Diferencias con la versión web: los archivos (respaldos, Excel, acuses) se guardan con el menú Compartir; el reporte PDF usa la impresión de Android ("Guardar como PDF"); los avisos se programan en el teléfono y llegan aunque la app esté cerrada; los enlaces de correo (confirmar cuenta, cambiar contraseña) abren la versión web.
+
+Páginas públicas para la ficha de Google Play: `privacidad.html` (política de privacidad) y `eliminar-cuenta.html` (eliminación de cuenta), publicadas junto con la app web.
