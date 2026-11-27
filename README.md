@@ -79,3 +79,7 @@ del servidor en una fase posterior; hoy la fuente de verdad es el documento sinc
 - **Seguridad**: Content-Security-Policy en el build (`vite.config.js`), RLS en todas las tablas, bucket privado.
 - **Accesibilidad**: revisión WCAG 2 AA con axe en las 18 pantallas, sin hallazgos.
 - **Publicación**: build con rutas relativas (`base: './'`), funciona en dominio propio, Vercel o GitHub Pages.
+
+## Publicación (GitHub Pages)
+
+El flujo `.github/workflows/publicar.yml` prueba, construye y publica la app en GitHub Pages cada vez que algo llega a `main`. Una sola vez: en el repositorio, Settings → Pages → Source: **GitHub Actions**. La dirección será `https://achautla.github.io/Cuenfis/`; agrégala en Supabase → Authentication → URL Configuration (Site URL y Redirect URLs).
