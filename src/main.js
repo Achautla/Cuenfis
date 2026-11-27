@@ -35,7 +35,7 @@ import * as avisos from './views/avisos.js';
 import * as reportes from './views/reportes.js';
 import * as legal from './views/legal.js';
 import { abrirFormulario } from './views/movimiento-form.js';
-import { arrancar as arrancarSync } from './data/sync.js';
+import { arrancar as arrancarSync, subirAhora } from './data/sync.js';
 import * as nube from './data/nube.js';
 import { recordatorios } from './core/recordatorios.js';
 import { revisar as revisarAvisos } from './ui/notificaciones.js';
@@ -140,17 +140,49 @@ suscribir(render);
 $('#fab').onclick = () => abrirFormulario({ tipo: 'entrada' });
 
 // Indicador de sincronización (solo con sesión)
+// En el celular es solo un ícono en el encabezado: verde tenue si todo está guardado, ámbar mientras sube o
+// hay cambios pendientes, rojo tachado sin conexión o con error. Al tocarlo muestra el detalle.
+const NIVEL = { 'al-dia': 'ok', sincronizando: 'sube', pendiente: 'sube', 'sin-conexion': 'mal', error: 'mal', conflicto: 'mal' };
+let ultimoSync = null;
 function pintarSync(s) {
+  ultimoSync = s;
   const [txt, cls] = cuenta.textoFase(s.fase);
-  for (const el of [$('#syncTop'), $('#syncSide')]) {
-    el.hidden = !s.usuario;
-    el.className = `sync-chip ${cls}`;
-    el.title = txt;
-    el.setAttribute('aria-label', `Nube: ${txt}`);
-    el.innerHTML = `${icon('cloud')}<span>${esc(txt)}</span>`;
-  }
+  const nivel = NIVEL[s.fase] ?? 'ok';
+  const side = $('#syncSide');
+  side.hidden = !s.usuario;
+  side.className = `sync-chip ${cls}`;
+  side.title = txt;
+  side.setAttribute('aria-label', `Nube: ${txt}`);
+  side.innerHTML = `${icon('cloud')}<span>${esc(txt)}</span>`;
+  const top = $('#syncTop');
+  top.hidden = !s.usuario;
+  top.className = `sync-ico ${nivel}`;
+  top.setAttribute('aria-label', `Nube: ${txt}. Ver detalle`);
+  top.innerHTML = icon(nivel === 'mal' ? 'cloud-off' : 'cloud');
+  if (!$('#syncPanel').hidden) pintarPanel();
   if (ruta() === 'cuenta' || location.hash.startsWith('#/cuenta')) render();
 }
+
+function pintarPanel() {
+  const s = ultimoSync ?? nube.getSync();
+  const [txt] = cuenta.textoFase(s.fase);
+  const nivel = NIVEL[s.fase] ?? 'ok';
+  const cuando = s.en ? new Date(s.en).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' }) : null;
+  $('#syncPanel').innerHTML = `<p class="sp-tit ${nivel}">${icon(nivel === 'mal' ? 'cloud-off' : 'cloud')}<b>${esc(txt)}</b></p>
+    <p class="small muted">${cuando ? `Último guardado: ${esc(cuando)}` : 'Aún no se ha guardado en la nube.'}</p>
+    ${s.error && nivel === 'mal' ? `<p class="small muted">${esc(s.error)}</p>` : ''}
+    <div class="row">${nivel !== 'ok' && s.fase !== 'sincronizando' ? `<button type="button" class="btn sm primary" id="spRetry">${icon('cloud')}Reintentar</button>` : ''}<a class="btn sm ghost" href="#/cuenta">Cuenta y nube</a></div>`;
+  $('#spRetry')?.addEventListener('click', () => { subirAhora(); });
+}
+function abrirPanel(abrir) {
+  const p = $('#syncPanel'), b = $('#syncTop');
+  p.hidden = !abrir; b.setAttribute('aria-expanded', String(abrir));
+  if (abrir) pintarPanel();
+}
+$('#syncTop').addEventListener('click', (ev) => { ev.stopPropagation(); abrirPanel($('#syncPanel').hidden); });
+document.addEventListener('click', (ev) => { if (!$('#syncPanel').hidden && !ev.target.closest('#syncPanel')) abrirPanel(false); });
+document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('#syncPanel').hidden) abrirPanel(false); });
+window.addEventListener('hashchange', () => abrirPanel(false));
 nube.alCambiar(pintarSync);
 arrancarSync();
 render();
@@ -162,6 +194,15 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 
 // Mantén a la vista qué regímenes están activos (accesible para estilos condicionales)
 document.documentElement.dataset.regs = regimenesEn(getEstado().perfil, hoyISO()).join(' ');
+
+// Android: barra de estado azul con texto claro, sin encimarse sobre la app
+if (nativo) {
+  import('@capacitor/status-bar').then(async ({ StatusBar, Style }) => {
+    await StatusBar.setOverlaysWebView({ overlay: false });
+    await StatusBar.setStyle({ style: Style.Dark });
+    await StatusBar.setBackgroundColor({ color: '#0a2540' });
+  }).catch(() => {});
+}
 
 // Android: botón Atrás cierra primero lo que esté abierto (con sus candados), luego regresa de pantalla
 if (nativo) {

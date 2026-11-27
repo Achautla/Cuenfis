@@ -2,8 +2,18 @@
   "appId": "mx.cuenfis.app",
   "appName": "Cuenfis",
   "webDir": "dist",
-  "android": { "allowMixedContent": false },
+  "android": {
+    "allowMixedContent": false,
+    "adjustMarginsForEdgeToEdge": "force"
+  },
   "plugins": {
-    "LocalNotifications": { "smallIcon": "ic_stat_cuenfis", "iconColor": "#0f2a4a" }
+    "LocalNotifications": {
+      "iconColor": "#0a2540"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0a2540",
+      "overlaysWebView": false
+    }
   }
 }

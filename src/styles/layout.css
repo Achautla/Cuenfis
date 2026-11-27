@@ -69,3 +69,33 @@
 @media (max-width: 899px) { .nav .mas .badge { position: absolute; top: 0; right: 2px; } }
 .sidebar .sync-chip { margin: 12px 8px 0; }
 .side-foot a { color: #b9c6d8; }
+
+/* Encabezado del celular: respeta la barra de estado (APK y PWA a pantalla completa) */
+.mobile-top { padding-top: calc(12px + env(safe-area-inset-top)); }
+@media (max-width: 899px) {
+  .sidebar .sync-chip { display: none; } /* en el celular el estado vive en el ícono del encabezado */
+  .main { padding-bottom: calc(168px + env(safe-area-inset-bottom)); } /* que el botón Registrar no tape la última tarjeta */
+}
+
+/* Ícono de la nube */
+.sync-ico { margin-left: auto; width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: 12px; background: transparent; cursor: pointer; color: #8fd3b0; }
+.sync-ico svg { width: 22px; height: 22px; }
+.sync-ico:hover { background: rgba(255, 255, 255, .08); }
+.sync-ico:focus-visible { outline: 2px solid #8fc1ff; outline-offset: 2px; }
+.sync-ico.ok { color: #7fcca6; opacity: .85; }
+.sync-ico.sube { color: #ffb547; animation: latido 1.4s ease-in-out infinite; }
+.sync-ico.mal { color: #ff7a7a; }
+@keyframes latido { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .sync-ico.sube { animation: none; } }
+
+.sync-panel { position: fixed; z-index: 40; top: calc(60px + env(safe-area-inset-top)); right: 12px; width: min(300px, calc(100vw - 24px));
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-md); box-shadow: 0 12px 32px rgba(10, 37, 64, .18);
+  padding: 14px; display: grid; gap: 8px; animation: enter var(--t-fast) var(--ease); }
+.sync-panel[hidden] { display: none; }
+.sync-panel p { margin: 0; }
+.sp-tit { display: flex; align-items: center; gap: 8px; }
+.sp-tit svg { width: 20px; height: 20px; flex: none; }
+.sp-tit.ok svg { color: var(--in); }
+.sp-tit.sube svg { color: #c77700; }
+.sp-tit.mal svg { color: var(--out); }
+@media (min-width: 900px) { .sync-panel { display: none !important; } }
