@@ -51,6 +51,7 @@ import { recordatorios } from './core/recordatorios.js';
 import { revisar as revisarAvisos } from './ui/notificaciones.js';
 import { getFoto } from './data/store.js';
 import { nativo } from './native.js';
+import * as huella from './ui/huella.js';
 
 // p: aparece en la barra inferior del celular; el resto va en "Más". g: grupo del menú. ver: cuándo se muestra.
 const RUTAS = {
@@ -215,6 +216,7 @@ nube.alCambiar((s) => { const id = s.usuario?.id ?? null; if (id !== ultimoUsuar
 arrancarSync();
 render();
 entrada($('#main'));
+huella.iniciar();
 
 // Avisos del dispositivo al abrir la app y al volver a ella
 const avisar = () => revisarAvisos(getEstado(), getFoto()).catch(() => {});

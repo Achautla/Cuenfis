@@ -6,6 +6,9 @@ import { icon } from '../ui/icons.js';
 import { $, esc, toast } from '../ui/dom.js';
 import { VERSION_LEGAL, AVISO_SIMPLIFICADO } from '../legal/textos.js';
 import { descargar } from '../ui/dom.js';
+import { ojitos } from '../ui/contrasena.js';
+import * as huella from '../ui/huella.js';
+import { nativo } from '../native.js';
 import '../styles/views/cuenta.css';
 
 let modo = 'entrar';
@@ -30,6 +33,11 @@ async function trasEntrar(main) {
     else await elegir(r.elegir, 'Ya tienes datos en la nube y también en este dispositivo');
   } catch (e) { toast(e.message, icon('alert')); }
   render(main);
+  if (nativo && !huella.activa() && (await huella.disponible())) {
+    const ok = await confirmar({ titulo: '¿Entrar con huella la próxima vez?', accion: 'Usar mi huella', peligro: false,
+      texto: 'Al abrir Cuenfis te pediremos tu huella (o el PIN del teléfono) en lugar de la contraseña.', efectos: ['Tu huella no sale del teléfono: la revisa Android.', 'Puedes desactivarlo en Cuenta y nube.'] });
+    if (ok && (await huella.activar()) === 'ok') { toast('Listo: la próxima vez entras con tu huella', icon('fingerprint')); render(main); }
+  }
 }
 
 async function elegir(remoto, titulo) {
@@ -75,6 +83,11 @@ export function render(main) {
     </div>
     <div class="card">
       <div class="card-head"><h2>Sesión</h2></div>
+      ${nativo ? `<div class="cu-huella" id="cuHuella" hidden>
+        <span class="cu-ico">${icon('fingerprint')}</span>
+        <span><b>Entrar con huella</b><span class="small muted">${huella.activa() ? 'Activo: al abrir la app te pedimos tu huella o el PIN del teléfono.' : 'Al abrir la app te pedimos tu huella en lugar de la contraseña.'}</span></span>
+        <button type="button" class="btn sm ${huella.activa() ? '' : 'primary'}" id="huellaBtn">${huella.activa() ? 'Desactivar' : 'Activar'}</button>
+      </div>` : ''}
       <div class="row"><button class="btn" id="salir">${icon('logout')}Cerrar sesión</button></div>
     </div>
     <div class="card">
@@ -99,6 +112,21 @@ export function render(main) {
     <p class="disclaimer">Tus datos están protegidos con seguridad por usuario: nadie más puede leerlos. Nunca te pediremos tu contraseña del SAT.</p>
   </section>`;
 
+  ojitos(main);
+  const ch = $('#cuHuella', main);
+  if (ch) huella.disponible().then((ok) => { ch.hidden = !ok && !huella.activa(); });
+  $('#huellaBtn', main)?.addEventListener('click', async () => {
+    if (huella.activa()) {
+      const ok = await confirmar({ titulo: '¿Desactivar la entrada con huella?', accion: 'Desactivar huella', peligro: false,
+        efectos: ['La app ya no pedirá tu huella al abrirse.', 'Tu sesión sigue abierta en este teléfono.'] });
+      if (!ok) return;
+      huella.desactivar(); toast('Entrada con huella desactivada', icon('fingerprint'));
+    } else {
+      const r = await huella.activar();
+      toast(r === 'ok' ? 'Listo: la próxima vez entras con tu huella' : r === 'no_disponible' ? 'Este teléfono no tiene huella configurada. Agrégala en los ajustes de Android.' : 'No se activó. Puedes intentarlo de nuevo.', icon('fingerprint'));
+    }
+    render(main);
+  });
   main.querySelectorAll('[data-modo]').forEach((b) => (b.onclick = () => { modo = b.dataset.modo; render(main); }));
   const fa = $('#fAcceso', main);
   if (fa) fa.onsubmit = async (ev) => {
@@ -139,6 +167,7 @@ export function render(main) {
       efectos: [...(pend ? ['Hay cambios que no se han subido a la nube. Si borras los datos de aquí, se perderán.'] : ['Todo está guardado en la nube.']),
         'Si es un dispositivo compartido, borra tus datos de aquí: los recuperas al volver a entrar.'] });
     if (!op) return;
+    huella.desactivar();
     await nube.salir();
     if (op === true) { reiniciar(); location.hash = '#/inicio'; }
     toast('Sesión cerrada', icon('logout'));
