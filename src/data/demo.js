@@ -38,6 +38,7 @@ export function datosDemo(hoy) {
     ],
     movimientos: movimientos.filter((m) => m.fecha <= hoy),
     declaraciones: {},
+    presupuestos: { comida: 3000, ocio: 1500, transporte: 800, vivienda: 4500 },
     preferencias: { metaAhorro: 5000 },
   };
 }

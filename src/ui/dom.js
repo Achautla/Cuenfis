@@ -32,7 +32,7 @@ export function toast(texto, ico = '') {
   t.innerHTML = `${ico}<span>${esc(texto)}</span>`;
   t.classList.add('on');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
+  toastTimer = setTimeout(() => t.classList.remove('on'), Math.max(2600, texto.length * 55));
 }
 
 const reduce = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;

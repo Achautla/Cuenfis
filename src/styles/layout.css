@@ -15,7 +15,7 @@
 .nav a[aria-current="page"] svg { color: #8fc1ff; }
 .side-foot { margin-top: auto; font-size: 12px; color: #8ea2bb; padding: 12px 8px; line-height: 1.4; }
 
-.main { padding: 20px 16px 120px; max-width: 1120px; margin: 0 auto; }
+.main { padding: 20px 16px 120px; max-width: 1120px; width: 100%; margin: 0 auto; }
 .page-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
 .page-head .sub { color: var(--ink-3); font-size: 13px; }
 .page-head .spacer { flex: 1; }
@@ -34,7 +34,14 @@
   .nav { justify-content: space-around; }
   .nav a { flex-direction: column; gap: 2px; font-size: 11px; padding: 6px 4px; min-width: 56px; min-height: 48px; justify-content: center; }
   .nav a .lbl-long { display: none; }
+  .nav a.sec { display: none; }
+  .nav .mas { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 11px; padding: 6px 4px; min-width: 56px; min-height: 48px; color: #b9c6d8; background: none; border: 0; border-radius: var(--r-sm); font-weight: 500; }
+  .nav .mas[aria-current="page"] { color: #fff; background: rgba(255, 255, 255, .1); }
 }
+.mas-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.mas-list a { display: flex; align-items: center; gap: 12px; padding: 14px 12px; border-radius: var(--r-md); color: var(--ink); text-decoration: none; font-weight: 500; }
+.mas-list a:hover { background: var(--surface-2); }
+.mas-list svg.i { color: var(--accent); }
 @media (min-width: 900px) {
   .app { display: grid; grid-template-columns: 232px minmax(0, 1fr); }
   .mobile-top { display: none; }
@@ -43,6 +50,7 @@
   .nav { flex-direction: column; gap: 2px; }
   .nav a { padding: 10px 12px; }
   .nav a .lbl-short { display: none; }
+  .nav .mas { display: none; }
   .main { padding: 28px 32px 64px; }
   .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

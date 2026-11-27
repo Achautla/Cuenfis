@@ -5,6 +5,8 @@ import { TIPOS_CUENTA } from '../data/catalogo.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, money, pct, Mes, nombreMes, countTo } from '../ui/dom.js';
 import { listaAgrupada } from './comun.js';
+import { estadoPresupuestos } from '../core/presupuestos.js';
+import { categoria } from '../data/catalogo.js';
 import { abrirFormulario } from './movimiento-form.js';
 import '../styles/views/inicio.css';
 
@@ -46,6 +48,7 @@ export function render(main) {
   const col = colchon(foto);
   const mesRes = foto.meses[k];
   const fechas = proximasFechas(foto);
+  const pres = estadoPresupuestos(foto, estado.presupuestos ?? {}, k);
   const ultimos = [...foto.movs].reverse().slice(0, 6);
   const nombre = foto.perfil?.nombre?.split(' ')[0] ?? '';
 
@@ -76,6 +79,11 @@ export function render(main) {
       <div class="kpi"><span class="k-ico">${icon('lifebuoy')}</span><span class="k-lbl">Colchón</span><b class="num">${col == null ? '—' : `${col.toFixed(1)} meses`}</b><small>Meses que cubres con tu disponible</small></div>
     </div>
     ${meta ? `<div class="card goal"><div class="row"><b>${icon('target')} Meta de ahorro mensual</b><span class="spacer"></span><span class="num small">${money(Math.max(0, mes.ahorro))} de ${money(meta)}</span></div><div class="progress"><i style="width:${Math.min(100, Math.max(0, mes.ahorro) / meta * 100)}%"></i></div></div>` : ''}
+
+    ${pres.filas.length ? `<div class="card">
+      <div class="card-head"><h2>Presupuestos de ${esc(nombreMes(k).split(' ')[0].toLowerCase())}</h2><span class="spacer"></span><a class="link" href="#/presupuestos">Ver todos</a></div>
+      <ul class="pres-mini">${pres.filas.slice(0, 4).map((f) => `<li class="${f.nivel}"><span>${esc(categoria(f.categoria).nombre)}</span><span class="pm-track"><i style="width:${Math.min(100, f.uso * 100)}%"></i></span><span class="num small">${money(f.gastado)} / ${money(f.limite)}</span></li>`).join('')}</ul>
+    </div>` : ''}
 
     <div class="grid-2">
       <div class="card">

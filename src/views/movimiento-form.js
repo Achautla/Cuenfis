@@ -7,6 +7,8 @@ import { getEstado, getFoto, aplicar } from '../data/store.js';
 import { icon } from '../ui/icons.js';
 import { $, $$, esc, money, hoyISO, toast, fechaLarga } from '../ui/dom.js';
 import { desgloseHTML, detalleTexto, chipsFiscales } from './comun.js';
+import { cruceDeUmbral } from '../core/presupuestos.js';
+import { ym } from '../core/motor.js';
 import '../styles/views/movimiento-form.css';
 
 const dlg = () => $('#dlg');
@@ -156,10 +158,11 @@ export function abrirFormulario({ tipo = 'entrada', mov = null } = {}) {
     const c = sim.cuentas.find((x) => x.id === draft.cuenta);
     if (draft.tipo !== 'entrada' && c && !c.esDeuda && c.saldo < 0 && !confirmarNegativo) { confirmarNegativo = true; pintarPreview(); return; }
     const limpio = Object.fromEntries(Object.entries(draft).filter(([, v]) => v !== undefined && v !== ''));
+    const antes = getFoto();
     if (mov) aplicar((s) => editarMovimiento(s, mov.id, limpio));
     else aplicar((s) => agregarMovimiento(s, limpio));
     cerrar();
-    toast(mov ? 'Cambios guardados' : 'Movimiento registrado', icon('check-circle'));
+    avisoAlGuardar(antes, getFoto(), draft, !!mov);
   });
 
   if (!d.open) d.showModal();
@@ -201,3 +204,22 @@ document.addEventListener('click', (ev) => {
 });
 // Cerrar al tocar el fondo
 document.addEventListener('click', (ev) => { if (ev.target === dlg()) cerrar(); });
+
+/** Impuestos al momento y alertas de presupuesto, justo después de guardar. */
+function avisoAlGuardar(antes, despues, draft, edicion) {
+  const m = despues.movs.find((x) => x.id === draft.id);
+  if (m?.tipo === 'entrada' && m.d.fiscal && m.d.regimen === 'resico' && m.delSat > 0) {
+    toast(`Guardado. Aparta ${money(m.delSat)} para el SAT: es el ISR y el IVA de este cobro.`, icon('landmark'));
+    return;
+  }
+  if (m?.tipo === 'salida') {
+    const cruce = cruceDeUmbral(antes, despues, getEstado().presupuestos, ym(m.fecha), m.categoria);
+    if (cruce) {
+      toast(cruce.nivel === 'excedido'
+        ? `Te pasaste del presupuesto de ${categoria(m.categoria).nombre} por ${money(-cruce.restante)}.`
+        : `Llevas el ${Math.round(cruce.uso * 100)}% del presupuesto de ${categoria(m.categoria).nombre}.`, icon('alert'));
+      return;
+    }
+  }
+  toast(edicion ? 'Cambios guardados' : 'Movimiento registrado', icon('check-circle'));
+}

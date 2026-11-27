@@ -55,6 +55,7 @@ export function estadoVacio() {
     ],
     movimientos: [],
     declaraciones: {},
+    presupuestos: {},
     preferencias: { metaAhorro: 0, diaAviso: 10 },
   };
 }

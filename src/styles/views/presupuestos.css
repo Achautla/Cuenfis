@@ -1,0 +1,17 @@
+.pres .page-head .field.inline { margin: 0; min-width: 180px; }
+.pres-sum { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.pres-sum div { display: grid; gap: 2px; }
+.pres-sum span { font-size: 13px; color: var(--ink-3); }
+.pres-sum b { font-size: 20px; }
+.pres-list { list-style: none; margin: 0; padding: 0; }
+.pres-list li { display: grid; grid-template-columns: 32px minmax(0, 1fr) 120px; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.pres-list li:last-child { border: 0; }
+.pl-main { display: grid; gap: 6px; }
+.pl-top { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.pl-track { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.pl-track i { display: block; height: 100%; width: var(--w); background: var(--in); border-radius: 99px; transition: width .5s var(--ease); }
+.pres-list li.aviso .pl-track i { background: var(--warn); }
+.pres-list li.excedido .pl-track i { background: var(--out); }
+.pl-in input { min-height: 40px; text-align: right; font-size: 15px; padding: 6px 10px; }
+@media (max-width: 480px) { .pres-list li { grid-template-columns: 32px minmax(0, 1fr) 96px; } }
+.avatar.sm { width: 32px; height: 32px; border-radius: 10px; } .avatar.sm svg.i { width: 16px; height: 16px; }

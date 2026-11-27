@@ -24,8 +24,10 @@ src/
     regimen.js       Vigencia de regímenes y qué categorías ve cada usuario
     desglose.js      Lo recibido o pagado → subtotal, IVA, retenciones, IVA acreditable, deducible
     motor.js         Meses RESICO (ISR/IVA, saldo a favor), saldos, Tengo/Debo/Disponible real, anual
+    simulador.js     "Si cobro X" y comparación RESICO / actividad empresarial / sueldo
+    presupuestos.js  Límites por categoría con avisos al 80% y 100%
   data/            Catálogo de categorías, acciones puras sobre el estado, almacenamiento
-  views/           Una pantalla por archivo (Inicio, Movimientos, Indicadores, Declaración, Aprende, Ajustes)
+  views/           Una pantalla por archivo (Inicio, Movimientos, Balance, Presupuestos, Indicadores, Declaración, Simulador, Aprende, Ajustes)
   styles/          tokens, base, layout, componentes y un CSS por pantalla (styles/views)
 public/            manifest, service worker e íconos (PWA)
 supabase/          Migraciones (tablas con seguridad por usuario, RLS)

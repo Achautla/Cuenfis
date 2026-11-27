@@ -54,3 +54,11 @@
 .date-item.soon .cal { border-color: var(--out); }
 .sat-strip { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 10px; align-items: center; margin-top: 12px; padding: 12px; border-radius: var(--r-md); background: var(--sat-soft); }
 .sat-strip > span:first-child { color: var(--sat); }
+
+.pres-mini { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.pres-mini li { display: grid; grid-template-columns: minmax(90px, 140px) minmax(0, 1fr) auto; gap: 12px; align-items: center; font-size: 14px; }
+.pm-track { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.pm-track i { display: block; height: 100%; background: var(--in); border-radius: 99px; }
+.pres-mini li.aviso i { background: var(--warn); }
+.pres-mini li.excedido i { background: var(--out); }
+@media (max-width: 480px) { .pres-mini li { grid-template-columns: minmax(0, 1fr) auto; } .pm-track { grid-column: 1 / -1; grid-row: 2; } }
