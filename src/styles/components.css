@@ -43,6 +43,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--a
 input[type="checkbox"], input[type="radio"] { width: 20px; min-height: 20px; height: 20px; accent-color: var(--navy); }
 .check { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--ink); margin-bottom: 10px; cursor: pointer; }
 .check small { display: block; color: var(--ink-3); font-size: 12px; }
+.check input[type="checkbox"] { width: 23px; height: 23px; flex: none; margin: 0; accent-color: var(--accent); cursor: pointer; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .cols-2 { display: grid; gap: 0 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 560px) { .cols-2 { grid-template-columns: minmax(0, 1fr); } }

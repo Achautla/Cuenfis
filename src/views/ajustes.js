@@ -64,7 +64,7 @@ export function render(main) {
     <div>
       <div class="card">
         <div class="card-head"><h2>Tus datos</h2></div>
-        <p class="small muted" style="margin-bottom:12px">${icon('lock')} ${nube.getUsuario() ? `Con sesión iniciada (${esc(nube.getUsuario().email)}): tus datos se guardan en la nube y en este dispositivo.` : 'Tus datos se guardan solo en este dispositivo.'} <a href="#/cuenta">Cuenta y nube</a> · <a href="#/privacidad">Aviso de privacidad</a> · <a href="#/terminos">Términos</a></p>
+        <p class="small muted" style="margin-bottom:12px">${icon('lock')} ${nube.getUsuario() ? `Con sesión iniciada (${esc(nube.getUsuario().email)}): tus datos se guardan en la nube y en este dispositivo.` : 'Tus datos se guardan solo en este dispositivo.'} <a href="#/cuenta">Cuenta y nube</a> · <a href="#/legal">Información legal</a></p>
         <div class="row">
           <button class="btn" id="exp">${icon('download')}Descargar respaldo</button>
           <label class="btn">${icon('upload')}Restaurar<input type="file" id="imp" accept="application/json" hidden /></label>
@@ -73,7 +73,7 @@ export function render(main) {
         </div>
       </div>
     </div>
-    <p class="disclaimer">Cuenfis ${version} · Cálculos estimados con reglas fiscales 2026.</p>
+    <p class="disclaimer">Cuenfis ${version} · Cálculos estimados con reglas fiscales 2026, no son asesoría fiscal. <a href="#/legal">Información legal</a></p>
   </section>`;
 
   const editarPerfil = (fn) => aplicar((s) => ({ ...s, perfil: fn(s.perfil) }));

@@ -1,3 +1,11 @@
+// Tipografías incluidas en la app (sin pedirlas a Google): funcionan sin conexión y no comparten tu IP con terceros
+import '@fontsource/inter/latin-400.css';
+import '@fontsource/inter/latin-500.css';
+import '@fontsource/inter/latin-600.css';
+import '@fontsource/inter/latin-700.css';
+import '@fontsource/inter-tight/latin-500.css';
+import '@fontsource/inter-tight/latin-600.css';
+import '@fontsource/inter-tight/latin-700.css';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/layout.css';
@@ -53,6 +61,8 @@ const RUTAS = {
   ajustes: { v: ajustes, t: 'Ajustes', i: 'settings', g: 'mas' },
   privacidad: { v: legal.privacidad, t: 'Aviso de privacidad', i: 'lock', g: 'mas', oculta: true },
   terminos: { v: legal.terminos, t: 'Términos y condiciones', i: 'file', g: 'mas', oculta: true },
+  'eliminar-cuenta': { v: legal.eliminar, t: 'Eliminar tu cuenta', i: 'trash', g: 'mas', oculta: true },
+  legal: { v: legal.informacion, t: 'Información legal', i: 'book', g: 'mas' },
 };
 const GRUPOS = { dinero: 'Mi dinero', plan: 'Planear', sat: 'Impuestos', mas: 'App' };
 const permitidas = () => Object.entries(RUTAS).filter(([, r]) => !r.ver || r.ver(getEstado()));
@@ -98,7 +108,7 @@ function render() {
     // Sin perfil solo se puede ver la bienvenida o iniciar sesión para traer tus datos
     const r0 = location.hash.replace(/^#\/?/, '').split('?')[0];
     if (r0 === 'cuenta') cuenta.render(main);
-    else if (r0 === 'privacidad' || r0 === 'terminos') legal.render(main, r0);
+    else if (['privacidad', 'terminos', 'eliminar-cuenta', 'legal'].includes(r0)) legal.render(main, r0);
     else bienvenida.render(main);
     return;
   }
