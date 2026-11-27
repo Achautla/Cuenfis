@@ -1,0 +1,6 @@
+.tips { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.tip { display: grid; gap: 8px; align-content: start; }
+.tip p { color: var(--ink-2); font-size: 14px; }
+.tip-ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.tip.alerta { border-color: color-mix(in srgb, var(--warn) 35%, var(--line)); }
+.tip.alerta .tip-ico { background: var(--warn-soft); color: var(--warn); }

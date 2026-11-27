@@ -1,0 +1,18 @@
+.recs .rec-sum { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.recs .rec-sum span { display: block; font-size: 12px; color: var(--ink-3); }
+.recs .rec-sum b { font-size: 20px; }
+.rec-pend, .rec-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 2px; }
+.rec-pend li, .rec-list li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 10px 4px; border-bottom: 1px solid var(--line); }
+.rec-pend li:last-child, .rec-list li:last-child { border-bottom: 0; }
+.rec-pend .rp-main, .rec-list .rl-main { display: grid; min-width: 0; }
+.rec-pend .rp-main b, .rec-list .rl-main b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rec-pend .rp-monto input { width: 120px; text-align: right; }
+.rec-pend .row, .rec-list .row { grid-column: 2 / -1; justify-content: flex-end; gap: 4px; }
+.rec-list li.off { opacity: .6; }
+.rec-grid { display: grid; gap: 0 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rec-grid .field:first-child { grid-column: 1 / -1; }
+@media (min-width: 900px) {
+  .rec-pend li, .rec-list li { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+  .rec-pend .row, .rec-list .row { grid-column: auto; }
+  .rec-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

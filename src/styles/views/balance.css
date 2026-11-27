@@ -1,0 +1,19 @@
+.bal-sum { display: grid; gap: 16px; }
+.bal-eq { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 16px; }
+.bal-eq > div { display: grid; gap: 2px; }
+.bal-eq span { font-size: 13px; color: var(--ink-3); }
+.bal-eq b { font-size: 22px; font-weight: 700; }
+.bal-eq .res b { font-size: 28px; color: var(--in); }
+.bal-eq .res b.neg { color: var(--out); }
+.bal-eq .op { font: 600 22px var(--font-num); color: var(--ink-3); padding-bottom: 2px; }
+.bal-bar { display: flex; height: 12px; border-radius: 99px; overflow: hidden; background: var(--surface-2); gap: 2px; }
+.bal-bar i { display: block; width: var(--w); animation: widen .6s var(--ease) both; transform-origin: left; }
+.bal-bar .t { background: var(--in); } .bal-bar .d { background: var(--out); }
+@keyframes widen { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.b-list { list-style: none; margin: 0; padding: 0; }
+.b-list li { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.b-list li:last-child { border: 0; }
+.b-list li.muted { display: block; }
+.b-list .num { font-weight: 600; }
+.b-ico { width: 36px; height: 36px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); display: grid; place-items: center; color: var(--ink-2); }
+.balance .card-head h2 { display: inline-flex; align-items: center; gap: 8px; }
