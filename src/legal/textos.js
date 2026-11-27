@@ -1,6 +1,6 @@
 // Textos legales. Versión y fecha se registran con cada aceptación (tabla consentimientos).
 // Datos del responsable proporcionados por él (2026-11-27). Conviene que un abogado revise ambos documentos.
-export const VERSION_LEGAL = '2026-11-27';
+export const VERSION_LEGAL = '2026-11-27.2';
 
 export const RESPONSABLE = {
   nombre: 'Brayand Axel Achautla Hernández',
@@ -24,6 +24,7 @@ export const AVISO_PRIVACIDAD = [
     '<b>Sin cuenta:</b> todo se guarda solo en tu dispositivo. No recibimos ninguno de tus datos.',
     '<b>Identificación y contacto (con cuenta):</b> correo electrónico; y si lo capturas, nombre y RFC.',
     '<b>Financieros y patrimoniales (con cuenta):</b> cuentas, saldos, deudas, tarjetas, ingresos, gastos, régimen fiscal, cálculos de impuestos, declaraciones, números de operación y acuses que adjuntes, clientes y facturas que registres, metas y presupuestos.',
+    '<b>Asistente con IA (solo si lo activas):</b> el texto de tus preguntas y los datos que el asistente necesita para responder cada una (por ejemplo, totales de un mes o los movimientos que busca). Tus conversaciones se guardan solo en tu dispositivo; en el servidor solo contamos cuántos mensajes usas al mes.',
     '<b>Técnicos:</b> dispositivo y navegador desde los que guardas (para resolver conflictos entre dispositivos) y fecha de cada versión guardada.',
   ]) + P('No te pedimos datos sensibles. Si en una nota de un gasto médico escribes detalles de tu salud, esos datos se protegen igual; te recomendamos no escribirlos. Nunca te pediremos tu contraseña ni tu e.firma del SAT.')],
   ['Para qué los usamos', P('<b>Finalidades necesarias para el servicio:</b>') + L([
@@ -31,11 +32,13 @@ export const AVISO_PRIVACIDAD = [
     'Guardar tu información en la nube, sincronizarla entre tus dispositivos y conservar versiones anteriores para que puedas recuperarlas.',
     'Generar los reportes que tú descargues y los avisos que tú actives.',
     'Mantener la seguridad de tu cuenta y atender tus solicitudes.',
+    'Si activas el asistente: responder tus preguntas con tus propios datos y preparar movimientos que tú revisas antes de guardar.',
   ]) + P('<b>No hay finalidades secundarias:</b> no usamos tus datos para publicidad, perfiles comerciales ni los vendemos.')],
-  ['Consentimiento', P('Por tratarse de datos financieros y patrimoniales, al crear tu cuenta te pedimos tu consentimiento expreso. Queda registrado con la fecha y la versión de este aviso. Puedes revocarlo en cualquier momento eliminando tu cuenta desde <i>Cuenta y nube</i>.')],
+  ['Consentimiento', P('Por tratarse de datos financieros y patrimoniales, al crear tu cuenta te pedimos tu consentimiento expreso. Queda registrado con la fecha y la versión de este aviso. Puedes revocarlo en cualquier momento eliminando tu cuenta desde <i>Cuenta y nube</i>.') + P('El asistente con IA tiene su propio consentimiento, que te pedimos aparte y también queda registrado. Puedes retirarlo en <i>Ajustes → Asistente con IA</i> sin afectar el resto de la app.')],
   ['Con quién se comparten', P('<b>No transferimos tus datos a terceros.</b> Para operar usamos proveedores que los tratan solo por nuestra cuenta y bajo nuestras instrucciones (encargados):') + L([
     '<b>Supabase</b>: base de datos, autenticación y almacenamiento de archivos (servidores en Estados Unidos).',
     '<b>Proveedor de hospedaje</b> de la aplicación web, que no recibe tus datos financieros.',
+    '<b>Anthropic</b> (Estados Unidos), solo si activas el asistente: procesa cada pregunta para generar la respuesta. Por contrato no usa estos datos para entrenar sus modelos.',
   ]) + P('Solo compartiríamos datos con autoridades cuando una ley o una orden judicial lo exija.')],
   ['Cómo limitar el uso de tus datos', P('Puedes usar Cuenfis sin cuenta, dejar vacíos los datos opcionales (nombre, RFC, notas, folios) y desactivar los avisos del dispositivo. También puedes borrar tus datos de la nube sin borrar los de tu dispositivo.')],
   ['Tus derechos ARCO', P('Tienes derecho a <b>Acceder</b> a tus datos, <b>Rectificarlos</b>, <b>Cancelarlos</b> y <b>Oponerte</b> a su tratamiento. La app te permite ejercer la mayoría directamente:') + L([
@@ -59,6 +62,7 @@ export const AVISO_PRIVACIDAD = [
 export const TERMINOS = [
   ['Qué es Cuenfis', P('Cuenfis es una herramienta para organizar tus finanzas personales y estimar tus obligaciones fiscales como persona física en México. Es informativa y educativa.')],
   ['No es asesoría fiscal', P('Los cálculos son <b>estimaciones</b> con las reglas fiscales vigentes que conocemos. No sustituyen la asesoría de un contador ni la información oficial del SAT. Antes de presentar una declaración, verifica las cifras con el prellenado del portal del SAT, tus CFDI y tus constancias. Tú decides qué declaras y eres responsable de tus declaraciones y pagos.')],
+  ['Asistente con IA', P('El asistente es opcional. Sus respuestas pueden contener errores: las cifras fiscales las calcula Cuenfis con las reglas publicadas y siguen siendo estimaciones. Nunca guarda movimientos por ti; tú revisas y confirmas cada uno. Tiene un límite de mensajes al mes para mantener el servicio sostenible.')],
   ['Sin conexión con el SAT', P('Cuenfis no presenta declaraciones, no emite facturas y no se conecta con el SAT ni con tu banco. Todo lo que ves viene de lo que tú capturas.')],
   ['Quién puede usarla', P('Debes ser mayor de 18 años. Cuenfis está pensada para personas físicas que tributan en México; los cálculos no aplican a personas morales ni a otros países.')],
   ['Tu cuenta', P('Eres responsable de la confidencialidad de tu contraseña y de la información que registras. Si detectas un acceso que no reconoces, cambia tu contraseña y avísanos.')],

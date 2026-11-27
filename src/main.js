@@ -37,6 +37,9 @@ import * as reglasVista from './views/reglas.js';
 import { activarFuentes } from './ui/fuente.js';
 import * as reglasRemotas from './data/reglas-remotas.js';
 import * as legal from './views/legal.js';
+import * as asistente from './views/asistente.js';
+import { preguntarSiHaceFalta, sincronizarConsentimiento } from './ia/consentimiento.js';
+import { reintentarReal } from './ia/conversacion.js';
 import { abrirFormulario } from './views/movimiento-form.js';
 import { arrancar as arrancarSync, subirAhora } from './data/sync.js';
 import * as nube from './data/nube.js';
@@ -48,6 +51,7 @@ import { nativo } from './native.js';
 // p: aparece en la barra inferior del celular; el resto va en "Más". g: grupo del menú. ver: cuándo se muestra.
 const RUTAS = {
   inicio: { v: inicio, t: 'Inicio', i: 'home', p: 1, g: 'dinero' },
+  asistente: { v: asistente, t: 'Asistente', i: 'sparkle', g: 'dinero' },
   avisos: { v: avisos, t: 'Avisos', i: 'bell', g: 'dinero' },
   movimientos: { v: movimientos, t: 'Movimientos', i: 'list', p: 1, g: 'dinero' },
   balance: { v: balance, t: 'Balance', i: 'scale', p: 1, g: 'dinero' },
@@ -110,6 +114,7 @@ function render() {
   if (!e.perfil) {
     document.querySelector('.sidebar').hidden = true;
     $('#fab').hidden = true;
+    $('#iaTop').hidden = true;
     // Sin perfil solo se puede ver la bienvenida o iniciar sesión para traer tus datos
     const r0 = location.hash.replace(/^#\/?/, '').split('?')[0];
     if (r0 === 'cuenta') cuenta.render(main);
@@ -120,7 +125,11 @@ function render() {
   document.querySelector('.sidebar').hidden = false;
   const r = ruta();
   pintarNav(r);
-  $('#fab').hidden = false;
+  $('#fab').hidden = r === 'asistente';
+  const iaTop = $('#iaTop');
+  iaTop.hidden = r === 'asistente';
+  if (!iaTop.innerHTML) iaTop.innerHTML = icon('sparkle');
+  setTimeout(preguntarSiHaceFalta, 600);
   document.title = `${RUTAS[r].t} · Cuenfis`;
   RUTAS[r].v.render(main);
   // Tablas con desplazamiento horizontal: alcanzables con teclado
@@ -192,6 +201,9 @@ document.addEventListener('click', (ev) => { if (!$('#syncPanel').hidden && !ev.
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('#syncPanel').hidden) abrirPanel(false); });
 window.addEventListener('hashchange', () => abrirPanel(false));
 nube.alCambiar(pintarSync);
+// Al entrar o salir de la cuenta, el asistente vuelve a intentar con la IA real y sube el consentimiento pendiente
+let ultimoUsuario = null;
+nube.alCambiar((s) => { const id = s.usuario?.id ?? null; if (id !== ultimoUsuario) { ultimoUsuario = id; reintentarReal(); sincronizarConsentimiento(); } });
 arrancarSync();
 render();
 

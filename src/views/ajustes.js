@@ -8,6 +8,8 @@ import { datosDemo } from '../data/demo.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, money, fechaLarga, toast, descargar, hoyISO } from '../ui/dom.js';
 import { leyenda } from '../ui/fuente.js';
+import { iaActiva, decidir } from '../ia/consentimiento.js';
+import { borrar as borrarConversacion } from '../ia/conversacion.js';
 import '../styles/views/ajustes.css';
 
 
@@ -64,6 +66,13 @@ export function render(main) {
 
     <div>
       <div class="card">
+        <div class="card-head"><h2>Asistente con IA</h2></div>
+        <p class="small muted" style="margin-bottom:12px">${icon('sparkle')} ${iaActiva() ? 'Activado. Solo se usa cuando le preguntas; tus conversaciones se quedan en este dispositivo.' : 'Desactivado. Actívalo para preguntar sobre tu dinero y tus impuestos en tus palabras.'} <a href="#/privacidad">Aviso de privacidad</a></p>
+        <div class="row">${iaActiva()
+          ? `<a class="btn" href="#/asistente">${icon('sparkle')}Abrir asistente</a><button class="btn danger" id="iaOff">Desactivar asistente</button>`
+          : `<button class="btn primary" id="iaOn">${icon('sparkle')}Activar asistente</button>`}</div>
+      </div>
+      <div class="card">
         <div class="card-head"><h2>Tus datos</h2></div>
         <p class="small muted" style="margin-bottom:12px">${icon('lock')} ${nube.getUsuario() ? `Con sesión iniciada (${esc(nube.getUsuario().email)}): tus datos se guardan en la nube y en este dispositivo.` : 'Tus datos se guardan solo en este dispositivo.'} <a href="#/cuenta">Cuenta y nube</a> · <a href="#/legal">Información legal</a></p>
         <div class="row">
@@ -77,6 +86,15 @@ export function render(main) {
     <p class="disclaimer">Cuenfis ${version} · Cálculos estimados con ${esc(leyenda(+getFoto().hoy.slice(0, 4)))}, no son asesoría fiscal. <a href="#/legal">Información legal</a></p>
   </section>`;
 
+  $('#iaOn', main)?.addEventListener('click', async () => { await decidir(true); toast('Asistente activado', icon('check-circle')); });
+  $('#iaOff', main)?.addEventListener('click', async () => {
+    const ok = await confirmar({ titulo: '¿Desactivar el asistente?', accion: 'Desactivar asistente',
+      efectos: ['Se retira tu consentimiento y el servidor deja de atender preguntas de tu cuenta.', 'Se borra la conversación guardada en este dispositivo.', 'Tus movimientos no cambian. Puedes volver a activarlo cuando quieras.'] });
+    if (!ok) return;
+    borrarConversacion();
+    await decidir(false);
+    toast('Asistente desactivado', icon('check-circle'));
+  });
   const editarPerfil = (fn) => aplicar((s) => ({ ...s, perfil: fn(s.perfil) }));
   $('#fPerfil', main).onsubmit = (ev) => { ev.preventDefault(); const f = new FormData(ev.target);
     editarPerfil((pp) => ({ ...pp, nombre: f.get('nombre').trim(), rfc: f.get('rfc').trim().toUpperCase(), frontera: f.has('frontera') })); toast('Perfil guardado', icon('check-circle')); };
