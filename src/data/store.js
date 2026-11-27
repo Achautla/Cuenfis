@@ -25,7 +25,8 @@ export const getEstado = () => estado;
 
 /** Foto calculada (memorizada hasta el siguiente cambio). */
 export function getFoto() {
-  if (!foto) foto = calcular(estado, hoyISO());
+  const hoy = hoyISO();
+  if (!foto || foto.hoy !== hoy) foto = calcular(estado, hoy); // recalcula si cambió el día con la app abierta
   return foto;
 }
 

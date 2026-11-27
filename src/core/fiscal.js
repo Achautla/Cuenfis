@@ -24,7 +24,8 @@ export function tasaResicoMensual(total, p) {
 /** ISR con tarifa progresiva [limInf, limSup, cuota, %]. */
 export function isrTarifa(base, tarifa) {
   if (base <= 0) return 0;
-  const fila = tarifa.find(([inf, sup]) => base >= inf && base <= sup) ?? tarifa.at(-1);
+  // El tramo es el último cuyo límite inferior no pasa la base (evita huecos entre centavos, p. ej. 844.595)
+  const fila = tarifa.findLast(([inf]) => base >= inf) ?? tarifa[0];
   const [inf, , cuota, pct] = fila;
   return r2(cuota + (base - inf) * pct);
 }

@@ -79,7 +79,7 @@ export function render(main) {
     </div>
     <div class="card">
       <div class="card-head"><h2>Tus datos y tus derechos</h2></div>
-      <p class="small muted" style="margin-bottom:12px">Puedes descargar todo lo que guardamos, borrar solo la copia en la nube o eliminar tu cuenta por completo. <a href="#/privacidad">Aviso de privacidad</a></p>
+      <p class="small muted" style="margin-bottom:12px">Puedes descargar todo lo que guardamos, borrar solo la copia en la nube o eliminar tu cuenta por completo. <a href="#/privacidad">Aviso de privacidad</a> · <a href="#/eliminar-cuenta">Qué se borra</a></p>
       <div class="row"><button class="btn" id="descargarTodo">${icon('download')}Descargar mis datos</button><button class="btn danger" id="borrarNube">${icon('trash')}Borrar mis datos de la nube</button><button class="btn danger" id="eliminarCuenta">${icon('trash')}Eliminar mi cuenta</button></div>
     </div>`
     : `

@@ -2,7 +2,11 @@
 // y, con sesión iniciada, cada cambio se sube como un documento con número de versión.
 import { createClient } from '@supabase/supabase-js';
 
+import { nativo, URL_PUBLICA } from '../native.js';
+
 const URL = import.meta.env.VITE_SUPABASE_URL;
+// En Android la app vive en https://localhost: los enlaces del correo deben abrir la versión web
+const aqui = () => (nativo ? URL_PUBLICA : location.origin + location.pathname);
 const KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const META = 'cuenfis:nube';
 
@@ -52,14 +56,14 @@ export async function entrar(email, password) {
 }
 
 export async function registrarse(email, password) {
-  const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } });
+  const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: aqui() } });
   if (error) throw new Error(mensaje(error));
   usuario = data.session?.user ?? null;
   return { usuario, confirmar: !data.session };
 }
 
 export async function recuperar(email) {
-  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname + '#/cuenta?nueva=1' });
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: aqui() + '#/cuenta?nueva=1' });
   if (error) throw new Error(mensaje(error));
 }
 
@@ -109,6 +113,7 @@ export async function subir(estado) {
 /** Adopta el documento de la nube como la versión de este dispositivo. */
 export function adoptar(remoto) { guardarMeta({ version: remoto.version, pendiente: false, user: usuario.id }); }
 export function marcarPendiente() { const m = leerMeta(); guardarMeta({ ...m, pendiente: true }); }
+export function olvidarVersion() { guardarMeta({ pendiente: true }); }
 export const versionLocal = () => leerMeta().version ?? null;
 
 export async function versionesAnteriores() {

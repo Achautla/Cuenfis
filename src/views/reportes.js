@@ -1,3 +1,4 @@
+import { imprimir } from '../native.js';
 import { getEstado, getFoto } from '../data/store.js';
 import { reporteContador } from '../core/reporte.js';
 import { rangoMes, ym } from '../core/motor.js';
@@ -111,6 +112,6 @@ export function render(main) {
 
   main.querySelectorAll('[data-tipo]').forEach((b) => (b.onclick = () => { tipo = b.dataset.tipo; clave = null; render(main); }));
   $('#selPer', main).onchange = (e) => { clave = e.target.value; render(main); };
-  $('#pdf', main).onclick = () => { const t0 = document.title; document.title = nombreArchivo; window.print(); document.title = t0; };
+  $('#pdf', main).onclick = () => imprimir(nombreArchivo).catch(() => toast('No se pudo abrir la impresión. Inténtalo de nuevo.', icon('alert')));
   $('#xls', main).onclick = async () => { try { await excel(r, nombreArchivo); } catch { toast('No pudimos crear el Excel. Intenta de nuevo.', icon('alert')); } };
 }

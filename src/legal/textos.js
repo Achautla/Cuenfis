@@ -1,13 +1,16 @@
 // Textos legales. Versión y fecha se registran con cada aceptación (tabla consentimientos).
-// IMPORTANTE: antes del lanzamiento, el responsable debe completar los datos marcados con [ ] y
-// conviene que un abogado revise ambos documentos.
+// Datos del responsable proporcionados por él (2026-11-27). Conviene que un abogado revise ambos documentos.
 export const VERSION_LEGAL = '2026-11-27';
 
 export const RESPONSABLE = {
-  nombre: '[Nombre completo o razón social del responsable]',
-  domicilio: '[Domicilio completo en México]',
-  correo: '[correo de privacidad, p. ej. privacidad@tu-dominio.mx]',
+  nombre: 'Brayand Axel Achautla Hernández',
+  domicilio: 'Calle Reforma Sur número 4, colonia Vicente Guerrero, Comalcalco, Tabasco, México',
+  correo: 'cuenfis.soporte@gmail.com',
+  sitio: 'https://achautla.github.io/Cuenfis/',
 };
+
+/** ¿Faltan datos del responsable? La app lo avisa en Información legal. */
+export const faltanDatos = Object.values(RESPONSABLE).some((v) => v.startsWith('['));
 
 const P = (t) => `<p>${t}</p>`;
 const L = (xs) => `<ul>${xs.map((x) => `<li>${x}</li>`).join('')}</ul>`;
@@ -40,19 +43,59 @@ export const AVISO_PRIVACIDAD = [
     'Rectificación: edita cualquier dato en la app.',
     'Cancelación: <i>Cuenta y nube → Eliminar mi cuenta</i> borra tu cuenta, tus datos en la nube, su historial y tus acuses.',
   ]) + P(`Para cualquier otra solicitud escribe a <b>${RESPONSABLE.correo}</b> con tu nombre, el correo de tu cuenta, lo que solicitas y, en su caso, el dato a corregir. Responderemos en los plazos que fija la Ley. Si consideras que no se respetaron tus derechos, puedes acudir a la Secretaría Anticorrupción y Buen Gobierno.`)],
-  ['Almacenamiento en tu dispositivo', P('Cuenfis guarda tu información y tu sesión en el almacenamiento local del navegador para funcionar sin conexión. No usamos cookies de rastreo ni herramientas de publicidad o analítica de terceros.')],
+  ['Cómo eliminar tu cuenta y tus datos', P('Desde la app: <i>Cuenta y nube → Eliminar mi cuenta</i>. Se borra al momento tu cuenta, tus datos en la nube, las versiones guardadas y tus acuses.') + P(`Si ya no tienes la app, escribe desde el correo de tu cuenta a <b>${RESPONSABLE.correo}</b> con el asunto "Eliminar mi cuenta". La eliminamos en un máximo de 20 días hábiles y te confirmamos por correo. Más detalles en ${RESPONSABLE.sitio}eliminar-cuenta.html`)],
+  ['Almacenamiento en tu dispositivo', P('Cuenfis guarda tu información y tu sesión en el almacenamiento interno de la app o del navegador para funcionar sin conexión. Si desinstalas la app o borras los datos del navegador, esa copia se borra; tu copia en la nube (si tienes cuenta) se conserva. No usamos cookies de rastreo, publicidad ni herramientas de analítica de terceros, y las tipografías vienen incluidas en la app.')],
+  ['Permisos del dispositivo', L([
+    '<b>Notificaciones (opcional):</b> solo si las activas en <i>Avisos</i>, para recordarte fechas límite. Puedes desactivarlas en cualquier momento.',
+    '<b>Archivos:</b> la app solo lee los archivos que tú eliges (un acuse o un respaldo) y solo guarda los que tú descargas.',
+    'No usamos tu ubicación, cámara, micrófono, contactos ni identificadores de publicidad.',
+  ])],
+  ['Menores de edad', P('Cuenfis está dirigida a personas mayores de 18 años. No recabamos a sabiendas datos de menores; si detectamos una cuenta de un menor, la eliminaremos.')],
   ['Seguridad y conservación', P('Cada usuario solo puede leer y escribir su propia información (seguridad a nivel de fila en la base de datos), la conexión va cifrada y los acuses se guardan en un espacio privado. Conservamos tus datos mientras tengas cuenta; al eliminarla se borran, salvo lo que una ley nos obligue a conservar.')],
   ['Cambios a este aviso', P(`Si cambia este aviso te lo mostraremos en la app antes de seguir usando la nube. Versión vigente: ${VERSION_LEGAL}.`)],
+  ['Contacto', P(`Responsable: ${RESPONSABLE.nombre}. Domicilio: ${RESPONSABLE.domicilio}. Correo de privacidad: <b>${RESPONSABLE.correo}</b>.`)],
 ];
 
 export const TERMINOS = [
   ['Qué es Cuenfis', P('Cuenfis es una herramienta para organizar tus finanzas personales y estimar tus obligaciones fiscales como persona física en México. Es informativa y educativa.')],
   ['No es asesoría fiscal', P('Los cálculos son <b>estimaciones</b> con las reglas fiscales vigentes que conocemos. No sustituyen la asesoría de un contador ni la información oficial del SAT. Antes de presentar una declaración, verifica las cifras con el prellenado del portal del SAT, tus CFDI y tus constancias. Tú decides qué declaras y eres responsable de tus declaraciones y pagos.')],
   ['Sin conexión con el SAT', P('Cuenfis no presenta declaraciones, no emite facturas y no se conecta con el SAT ni con tu banco. Todo lo que ves viene de lo que tú capturas.')],
+  ['Quién puede usarla', P('Debes ser mayor de 18 años. Cuenfis está pensada para personas físicas que tributan en México; los cálculos no aplican a personas morales ni a otros países.')],
   ['Tu cuenta', P('Eres responsable de la confidencialidad de tu contraseña y de la información que registras. Si detectas un acceso que no reconoces, cambia tu contraseña y avísanos.')],
   ['Uso permitido', P('No debes usar Cuenfis para fines ilícitos, intentar acceder a datos de otros usuarios o afectar el funcionamiento del servicio.')],
   ['Disponibilidad', P('Procuramos que el servicio esté disponible y que tus datos estén respaldados (por eso guardamos versiones anteriores y puedes descargar respaldos), pero puede haber interrupciones. Te recomendamos descargar un respaldo de vez en cuando.')],
   ['Responsabilidad', P('En la medida que permita la ley, no somos responsables de multas, recargos, diferencias de impuestos ni decisiones financieras tomadas con base en las estimaciones de la app.')],
+  ['Propiedad intelectual', P(`La app, su diseño, textos y código pertenecen a ${RESPONSABLE.nombre}, salvo las bibliotecas de terceros que usa bajo sus propias licencias (ver <i>Información legal</i>). Tus datos son tuyos: puedes descargarlos y borrarlos cuando quieras.`)],
+  ['Suspensión y baja', P('Puedes dejar de usar Cuenfis y eliminar tu cuenta en cualquier momento. Podemos suspender una cuenta que se use para fines ilícitos o que intente afectar el servicio o a otros usuarios, avisándote cuando sea posible.')],
   ['Precio', P('Hoy Cuenfis es gratuito. Si en el futuro hubiera funciones de pago, te lo informaremos antes y nunca se cobrará sin tu aceptación.')],
-  ['Cambios y ley aplicable', P(`Podemos actualizar estos términos; te avisaremos en la app. Se rigen por las leyes de México. Versión vigente: ${VERSION_LEGAL}.`)],
+  ['Cambios y ley aplicable', P(`Podemos actualizar estos términos; te avisaremos en la app. Se rigen por las leyes de México y, para cualquier controversia, te puedes dirigir a la Procuraduría Federal del Consumidor (Profeco) o a los tribunales competentes de tu domicilio. Versión vigente: ${VERSION_LEGAL}.`)],
+  ['Contacto', P(`${RESPONSABLE.nombre} · ${RESPONSABLE.domicilio} · <b>${RESPONSABLE.correo}</b>`)],
+];
+
+/** Página pública para eliminar la cuenta (Google Play la pide aunque el usuario ya no tenga la app). */
+export const ELIMINAR_CUENTA = [
+  ['Desde la app (inmediato)', L([
+    'Abre Cuenfis e inicia sesión.',
+    'Ve a <i>Cuenta y nube → Tus datos y tus derechos</i>.',
+    'Si quieres conservar una copia, toca <i>Descargar mis datos</i>.',
+    'Toca <i>Eliminar mi cuenta</i>, escribe ELIMINAR y confirma.',
+  ])],
+  ['Sin la app (por correo)', P(`Escribe desde el correo de tu cuenta a <b>${RESPONSABLE.correo}</b> con el asunto "Eliminar mi cuenta". Para proteger tus datos, solo atendemos solicitudes enviadas desde el correo registrado. La eliminamos en un máximo de 20 días hábiles y te confirmamos por correo.`)],
+  ['Qué se borra', L([
+    'Tu cuenta y tu correo de acceso.',
+    'Todos tus datos en la nube: movimientos, cuentas, regímenes, declaraciones, metas, presupuestos, clientes y facturas registradas.',
+    'Las versiones anteriores guardadas y los acuses que hayas subido.',
+    'El registro de tu consentimiento.',
+  ])],
+  ['Qué se conserva', P('Nada en nuestros servidores, salvo lo que una ley nos obligue a conservar. Los datos guardados en tu propio dispositivo se borran al desinstalar la app o al usar <i>Ajustes → Borrar todo</i>.')],
+  ['Solo quieres borrar tus datos, no la cuenta', P('En <i>Cuenta y nube</i> usa <i>Borrar mis datos de la nube</i>: se borra tu información guardada en la nube y conservas tu cuenta y los datos de tu dispositivo.')],
+];
+
+export const DESCARGO = 'Cuenfis da estimaciones con las reglas fiscales vigentes que conocemos (2026). No es asesoría fiscal, no presenta declaraciones ni emite facturas y no se conecta con el SAT ni con tu banco. Verifica tus cifras con el portal del SAT o con un contador.';
+
+export const LICENCIAS = [
+  ['@supabase/supabase-js', 'MIT', 'Cuenta, base de datos y archivos en la nube'],
+  ['write-excel-file', 'MIT', 'Reportes en Excel'],
+  ['Inter e Inter Tight (Fontsource)', 'SIL Open Font License 1.1', 'Tipografías'],
+  ['Vite', 'MIT', 'Construcción de la app'],
 ];

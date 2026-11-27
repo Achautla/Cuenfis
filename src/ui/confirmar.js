@@ -18,6 +18,7 @@ let dlg = null;
 export function confirmar({ titulo, texto = '', efectos = [], accion = 'Confirmar', peligro = true, escribir = '', alternativa = '' }) {
   if (!dlg) { dlg = document.createElement('dialog'); dlg.id = 'dlgConf'; dlg.className = 'conf'; document.body.append(dlg); }
   return new Promise((resolve) => {
+    if (dlg.open) { resolve(false); return; } // doble toque: ya hay una confirmación abierta
     dlg.innerHTML = `<form method="dialog">
       <div class="conf-body">
         <span class="conf-ico ${peligro ? 'danger' : ''}">${icon(peligro ? 'alert' : 'info')}</span>

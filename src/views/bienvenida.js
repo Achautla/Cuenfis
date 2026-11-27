@@ -32,7 +32,7 @@ export function render(main) {
         <button type="button" class="btn ghost" id="demo">${icon('sparkle')}Explorar con datos de ejemplo</button>
         <a class="btn ghost" href="#/cuenta">${icon('cloud')}Ya tengo cuenta: iniciar sesión</a>
       </form>
-      <p class="disclaimer">Cuenfis da estimaciones con las reglas fiscales 2026. No sustituye la asesoría de un contador. Sin cuenta, tus datos se quedan solo en este dispositivo.<br /><a href="#/privacidad">Aviso de privacidad</a> · <a href="#/terminos">Términos y condiciones</a></p>
+      <p class="disclaimer">Cuenfis da estimaciones con las reglas fiscales 2026. No sustituye la asesoría de un contador. Sin cuenta, tus datos se quedan solo en este dispositivo.<br /><a href="#/privacidad">Aviso de privacidad</a> · <a href="#/terminos">Términos y condiciones</a> · <a href="#/legal">Información legal</a></p>
     </div></section>`;
   $('#fBienv', main).onsubmit = (ev) => {
     ev.preventDefault();

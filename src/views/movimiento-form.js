@@ -70,7 +70,7 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
       const aj = {};
       for (const k of ['subtotal', 'iva', 'isrRet', 'ivaRet']) { const v = fd.get('aj_' + k); if (v !== '' && v != null) aj[k] = Number(v); }
       draft.ajuste = Object.keys(aj).length ? aj : undefined;
-    }
+    } else draft.ajuste = undefined; // "Mi factura dice otra cosa" solo aplica a cobros con factura
   };
 
   const pintarCategorias = () => {
@@ -194,7 +194,9 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     if (mesesDecl.length && !(await confirmar({ titulo: `¿${mov ? 'Cambiar' : 'Agregar'} un movimiento de un mes ya declarado?`, accion: 'Guardar de todos modos', peligro: false,
       efectos: [`${mesesDecl.map(nombreMes).join(' y ')} ya está marcado como ${mesesDecl.map((k) => decls[k].estado).join(' / ')}.`, 'Sus cálculos cambiarán y el SAT ya tiene los números anteriores: quizá debas presentar una declaración complementaria.'] }))) return;
     const antes = getFoto();
-    if (mov) aplicar((s) => editarMovimiento(s, mov.id, limpio));
+    // Al editar, los campos que se vaciaron (ajuste, sueldo bruto, nota...) se quitan del movimiento
+    const quitados = Object.fromEntries(Object.keys(mov ?? {}).filter((k) => !(k in limpio) && !['id', 'historial'].includes(k)).map((k) => [k, undefined]));
+    if (mov) aplicar((s) => editarMovimiento(s, mov.id, { ...quitados, ...limpio }));
     else aplicar((s) => agregarMovimiento(s, limpio));
     if (!mov && repetir) {
       const { id, fecha, historial, uuid, ...plantilla } = limpio;
@@ -244,7 +246,13 @@ document.addEventListener('click', (ev) => {
   if (b && !b.closest('dialog')) abrirDetalle(b.dataset.mov);
 });
 // Cerrar al tocar el fondo
-document.addEventListener('click', (ev) => { if (ev.target === dlg()) cerrar(); });
+document.addEventListener('click', (ev) => {
+  const d = dlg();
+  if (ev.target !== d) return;
+  // Pasa por el mismo candado que Esc: si hay algo capturado, pregunta antes de descartar
+  if (d.oncancel) d.oncancel(new Event('cancel', { cancelable: true }));
+  else cerrar();
+});
 
 /** Impuestos al momento y alertas de presupuesto, justo después de guardar. */
 function avisoAlGuardar(antes, despues, draft, edicion) {

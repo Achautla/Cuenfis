@@ -21,7 +21,8 @@ function proximasFechas(foto) {
     const mesDecl = new Date(lim.getFullYear(), lim.getMonth() - 1, 1);
     const clave = `${mesDecl.getFullYear()}-${String(mesDecl.getMonth() + 1).padStart(2, '0')}`;
     const m = foto.meses[clave];
-    out.push({ t: `Declaración mensual de ${Mes(mesDecl.getMonth()).toLowerCase()}`, s: m ? `ISR + IVA: ${money(m.totalPagar)}${m.estado === 'pagada' ? ' · pagada' : ''}` : 'RESICO', f: lim, ok: m?.estado === 'pagada' });
+    const hecha = m?.estado === 'presentada' && !m.totalPagar; // presentada en ceros: ya no hay nada que hacer
+    out.push({ t: `Declaración mensual de ${Mes(mesDecl.getMonth()).toLowerCase()}`, s: m ? `ISR + IVA: ${money(m.totalPagar)}${m.estado === 'pagada' ? ' · pagada' : hecha ? ' · presentada en ceros' : ''}` : 'RESICO', f: lim, ok: m?.estado === 'pagada' || hecha });
   }
   const y = hoy.getFullYear();
   const anioAnual = hoy.getMonth() > 3 ? y : y - 1;

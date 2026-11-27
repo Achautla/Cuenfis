@@ -22,6 +22,7 @@ export function recordatorios(estado, foto, hoy = foto.hoy) {
   // Declaraciones mensuales RESICO: vencen el día 17 del mes siguiente (art. 113-E)
   for (const mes of Object.values(foto.meses)) {
     if (mes.futuro || mes.estado === 'pagada' || !mes.cerrado) continue;
+    if (mes.estado === 'presentada' && !mes.totalPagar) continue; // presentada en ceros: ya no hay nada que hacer
     const [my, mm] = mes.clave.split('-').map(Number);
     const limite = `${mm === 12 ? my + 1 : my}-${pad(mm === 12 ? 1 : mm + 1)}-17`;
     const d = dias(hoy, limite);

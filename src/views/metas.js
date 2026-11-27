@@ -55,7 +55,7 @@ export function render(main) {
         <label class="field"><span>Nombre</span><input name="nombre" required maxlength="50" value="${esc(e?.nombre ?? '')}" placeholder="Viaje a Oaxaca" /></label>
         <label class="field"><span>Tipo</span><select name="tipo">${Object.entries(TIPOS).map(([k, t]) => `<option value="${k}" ${e?.tipo === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
         <label class="field"><span>Cuánto necesitas</span><input name="objetivo" type="number" min="1" step="0.01" required value="${esc(e?.objetivo ?? '')}" /></label>
-        <label class="field"><span>Para cuándo (opcional)</span><input name="fecha" type="date" min="${foto.hoy}" value="${esc(e?.fecha ?? '')}" /></label>
+        <label class="field"><span>Para cuándo (opcional)</span><input name="fecha" type="date" min="${e?.fecha && e.fecha < foto.hoy ? e.fecha : foto.hoy}" value="${esc(e?.fecha ?? '')}" /></label>
         <label class="field"><span>¿Dónde lo guardas?</span><select name="cuenta"><option value="">Lo registro a mano</option>${ahorro.map((c) => `<option value="${esc(c.id)}" ${e?.cuenta === c.id ? 'selected' : ''}>${esc(c.nombre)} (${money(c.saldo)})</option>`).join('')}</select>
           <span class="hint">${ahorro.length ? 'Si la ligas a una cuenta de ahorro, avanza sola con su saldo.' : 'Agrega una cuenta de ahorro en Ajustes para que avance sola.'}</span></label>
         <label class="field"><span>Ya llevas (si es a mano)</span><input name="aportado" type="number" min="0" step="0.01" value="${esc(e?.aportado ?? '')}" /></label>

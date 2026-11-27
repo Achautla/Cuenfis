@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cuenfis</string>
+    <string name="title_activity_main">Cuenfis</string>
+    <string name="package_name">mx.cuenfis.app</string>
+    <string name="custom_url_scheme">mx.cuenfis.app</string>
+</resources>
