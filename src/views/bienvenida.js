@@ -9,7 +9,7 @@ export function render(main) {
   const hoy = hoyISO();
   main.innerHTML = `<section class="view welcome">
     <div class="welcome-card card">
-      <img src="/icons/icon.svg" alt="" width="48" height="48" />
+      <img src="${import.meta.env.BASE_URL}icons/icon.svg" alt="" width="48" height="48" />
       <h1>Bienvenido a Cuenfis</h1>
       <p class="muted">Registra lo que entra y sale de tus cuentas. Cuenfis separa solo lo que es tuyo y lo que es del SAT, y te deja los números como los pide tu declaración.</p>
       <form id="fBienv">
