@@ -88,3 +88,26 @@ describe('Modo demostración', () => {
     expect(ev.at(-1).md).toMatch(/Prueba con/);
   });
 });
+
+describe('Fase 9: consultas por chat', () => {
+  it('estado_financiero junta saldos, presupuestos y metas', () => {
+    const r = ia.ejecutar('estado_financiero', { mes: HOY.slice(0, 7) });
+    expect(r.saldos).toHaveProperty('disponible_real');
+    expect(r.presupuestos.categorias.length).toBeGreaterThan(0);
+    expect(r.metas.map((m) => m.nombre)).toContain('Viaje a Oaxaca');
+    expect(ia.ejecutar('estado_financiero', { mes: 'x' }).error).toBeTruthy();
+  });
+  it('demostración: presupuestos, comparación y búsqueda por categoría', async () => {
+    expect((await correr('¿Cómo voy con mis presupuestos?'))[0]).toMatchObject({ nombre: 'estado_financiero' });
+    const cmp = await correr('¿Cómo voy contra el mes pasado?');
+    expect(cmp.filter((e) => e.t === 'herramienta')).toHaveLength(2);
+    expect(cmp.at(-1).md).toMatch(/Gasto real/);
+    const b = await correr('¿Cuánto gasté en comida este mes?');
+    expect(b[0]).toMatchObject({ nombre: 'buscar_movimientos' });
+    expect(b.at(-1).md).toMatch(/comida/);
+  });
+  it('un cobro dictado se propone como entrada', async () => {
+    const ev = await correr('Me pagaron 8,500 por transferencia');
+    expect(ev.find((e) => e.t === 'propuesta').datos).toMatchObject({ tipo: 'entrada', monto: 8500, forma_pago: 'transferencia' });
+  });
+});

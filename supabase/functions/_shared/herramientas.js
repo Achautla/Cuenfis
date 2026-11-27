@@ -36,6 +36,11 @@ export const HERRAMIENTAS = [
     input_schema: { type: 'object', properties: { tipo: { type: 'string', enum: ['entrada', 'salida'] } }, required: ['tipo'], additionalProperties: false },
   },
   {
+    name: 'estado_financiero',
+    description: 'Foto financiera del usuario: saldos (lo que tiene, lo que debe, disponible real y lo apartado para el SAT), presupuestos de un mes con lo gastado y lo que queda, y avance de sus metas de ahorro.',
+    input_schema: { type: 'object', properties: { mes: { type: 'string', description: 'Mes AAAA-MM para los presupuestos' } }, required: ['mes'], additionalProperties: false },
+  },
+  {
     name: 'declaracion_mensual',
     description: 'Cifras de la declaración mensual (ISR e IVA de RESICO) de un mes, calculadas por el motor de Cuenfis, casilla por casilla. Solo aplica si el usuario tiene RESICO ese mes.',
     input_schema: { type: 'object', properties: { mes: { type: 'string', description: 'Mes AAAA-MM' } }, required: ['mes'], additionalProperties: false },

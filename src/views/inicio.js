@@ -11,6 +11,8 @@ import { abrirFormulario } from './movimiento-form.js';
 import { estadoTarjeta } from '../core/deudas.js';
 import { pendientesRecurrentes, progresoMeta, resumenClientes } from '../core/agenda.js';
 import { leyenda } from '../ui/fuente.js';
+import { iaActiva } from '../ia/consentimiento.js';
+import { preguntar } from '../ia/conversacion.js';
 import '../styles/views/inicio.css';
 
 function proximasFechas(foto) {
@@ -69,6 +71,12 @@ export function render(main) {
     <div class="page-head"><div><h1>Hola${nombre ? `, ${esc(nombre)}` : ''}</h1><p class="sub">${esc(nombreMes(k))}</p></div><span class="spacer"></span>
       <div class="row desk-actions"><button class="btn in" data-nuevo="entrada">${icon('arrow-down-left')}Entrada</button><button class="btn out" data-nuevo="salida">${icon('arrow-up-right')}Salida</button><button class="btn" data-nuevo="transferencia">${icon('swap')}Transferir</button></div></div>
 
+    ${iaActiva() ? `<form class="ia-rapida" id="iaRapida" role="search">
+      <span class="ia-rapida-ico">${icon('sparkle')}</span>
+      <label class="sr-only" for="iaRapidaTxt">Pregúntale a tu asistente</label>
+      <input id="iaRapidaTxt" maxlength="2000" autocomplete="off" placeholder="Pregunta o dicta un gasto" />
+      <button class="btn primary sm" type="submit">Preguntar</button>
+    </form>` : ''}
     <div class="hero">
       <div class="hero-main">
         <p class="hero-label">Disponible real ${icon('info')}<span class="tooltip">Lo que de verdad puedes gastar: lo que tienes en tus cuentas menos lo que debes, incluidos los impuestos que ya generaste.</span></p>
@@ -133,6 +141,13 @@ export function render(main) {
     <p class="disclaimer">Cálculos estimados con ${esc(leyenda(+getFoto().hoy.slice(0, 4)))}. Confírmalos con el SAT o con un contador antes de declarar.</p>
   </section>`;
 
+  $('#iaRapida', main)?.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const t = $('#iaRapidaTxt', main).value.trim();
+    if (!t) { $('#iaRapidaTxt', main).focus(); return; }
+    location.hash = '#/asistente';
+    preguntar(t);
+  });
   const el = $('#heroDisp', main);
   el.dataset.v = 0;
   countTo(el, b.disponible);

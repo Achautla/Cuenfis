@@ -4,6 +4,7 @@ import { getFoto, getEstado } from '../data/store.js';
 import { CATEGORIAS, categoria, REGIMENES } from '../data/catalogo.js';
 import { categoriasDisponibles, regimenesEn, regimenesEnRango } from '../core/regimen.js';
 import { reglas, valor, fuente } from '../core/reglas.js';
+import { estadoPresupuestos } from '../core/presupuestos.js';
 import { CLAVES_REGLAS, NOMBRES_HERRAMIENTAS } from '../../supabase/functions/_shared/herramientas.js';
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
@@ -42,6 +43,23 @@ function buscar_movimientos({ desde, hasta, tipo, categoria: cat, texto }) {
 function listar_categorias({ tipo }) {
   const hoy = getFoto().hoy;
   return { categorias: categoriasDisponibles(getEstado().perfil, hoy, tipo === 'entrada' ? 'entrada' : 'salida', CATEGORIAS).map((c) => ({ id: c.id, nombre: c.nombre, ayuda: c.tip })) };
+}
+
+function estado_financiero({ mes }) {
+  if (!/^\d{4}-\d{2}$/.test(mes ?? '')) return { error: 'Mes con formato AAAA-MM' };
+  const foto = getFoto();
+  const e = getEstado();
+  const b = foto.balance;
+  const pres = estadoPresupuestos(foto, e.presupuestos ?? {}, mes);
+  const aportado = (m) => (m.cuenta ? (foto.cuentas.find((c) => c.id === m.cuenta)?.saldo ?? 0) : Number(m.aportado) || 0);
+  return {
+    saldos: { tengo: b.tengo, deudas: b.deudas, apartado_para_sat: b.bolsa, disponible_real: b.disponible },
+    cuentas: foto.cuentas.map((c) => ({ nombre: c.nombre, saldo: c.saldo, es_deuda: !!c.esDeuda })),
+    presupuestos: { mes, total: pres.total, gastado: pres.gastado, restante: r2(pres.total - pres.gastado),
+      categorias: pres.filas.map((f) => ({ categoria: categoria(f.categoria).nombre, limite: f.limite, gastado: f.gastado, restante: f.restante, uso: r2(f.uso * 100) + '%', estado: f.nivel })) },
+    metas: (e.metas ?? []).map((m) => { const a = r2(aportado(m)); return { nombre: m.nombre, objetivo: Number(m.objetivo), ahorrado: a, avance: r2(Math.min(1, a / (Number(m.objetivo) || 1)) * 100) + '%', fecha: m.fecha ?? null }; }),
+    meta_ahorro_mensual: Number(e.preferencias?.metaAhorro) || 0,
+  };
 }
 
 function declaracion_mensual({ mes }) {
@@ -90,7 +108,7 @@ function proponer_movimiento(e) {
   return { estado: 'mostrado_al_usuario', nota: 'El usuario lo revisará y lo guardará o lo descartará en la app. No digas que ya se guardó.' };
 }
 
-const IMPL = { resumen_periodo, buscar_movimientos, listar_categorias, declaracion_mensual, declaracion_anual, regla_fiscal, proponer_movimiento };
+const IMPL = { estado_financiero, resumen_periodo, buscar_movimientos, listar_categorias, declaracion_mensual, declaracion_anual, regla_fiscal, proponer_movimiento };
 
 /** Ejecuta una herramienta pedida por el asistente. Nunca lanza: los errores vuelven como datos. */
 export function ejecutar(nombre, entrada) {
@@ -108,6 +126,7 @@ export const ETIQUETAS = {
   resumen_periodo: 'Revisando tus números del periodo',
   buscar_movimientos: 'Buscando en tus movimientos',
   listar_categorias: 'Revisando tus categorías',
+  estado_financiero: 'Revisando saldos, presupuestos y metas',
   declaracion_mensual: 'Calculando tu declaración mensual',
   declaracion_anual: 'Calculando tu declaración anual',
   regla_fiscal: 'Consultando la regla fiscal y su fuente',

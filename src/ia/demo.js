@@ -7,10 +7,14 @@ const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 const n = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const masDias = (iso, d) => new Date(Date.parse(`${iso}T12:00:00Z`) + d * 864e5).toISOString().slice(0, 10);
 
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const ini = (yy, mm) => `${yy}-${String(mm).padStart(2, '0')}-01`;
+const fin = (yy, mm) => new Date(Date.UTC(yy, mm, 0)).toISOString().slice(0, 10);
+
 function periodoDe(t, hoy) {
   const [y, m] = hoy.split('-').map(Number);
-  const ini = (yy, mm) => `${yy}-${String(mm).padStart(2, '0')}-01`;
-  const fin = (yy, mm) => new Date(Date.UTC(yy, mm, 0)).toISOString().slice(0, 10);
+  const nm = MESES.findIndex((x) => new RegExp(`\\b${x}\\b`).test(t));
+  if (nm >= 0) { const yy = nm + 1 > m ? y - 1 : y; return [ini(yy, nm + 1), nm + 1 === m && yy === y ? hoy : fin(yy, nm + 1), `${MESES[nm]}${yy !== y ? ` de ${yy}` : ''}`]; }
   if (/mes pasado|anterior/.test(t)) { const d = new Date(Date.UTC(y, m - 2, 1)); return [ini(d.getUTCFullYear(), d.getUTCMonth() + 1), fin(d.getUTCFullYear(), d.getUTCMonth() + 1), 'el mes pasado']; }
   if (/ano|anio/.test(t)) return [`${y}-01-01`, hoy, `lo que va de ${y}`];
   if (/semana/.test(t)) return [masDias(hoy, -6), hoy, 'los últimos 7 días'];
@@ -105,6 +109,67 @@ La tarifa es la del art. 152 de la Ley del ISR. Es una estimación; confírmala 
     return;
   }
 
+  if (/presupuest|cuanto tengo|cuanto debo|disponible|saldo|mis metas|\bmeta|mis deudas/.test(t)) {
+    alEvento({ t: 'herramienta', nombre: 'estado_financiero' });
+    await espera(450);
+    const r = ejecutar('estado_financiero', { mes: ctx.hoy.slice(0, 7) });
+    const ps = r.presupuestos.categorias;
+    const est = { excedido: 'Te pasaste', aviso: 'Cerca del límite', ok: 'Bien' };
+    let md = `Tienes **${money(r.saldos.tengo)}** y debes ${money(r.saldos.deudas)} en tarjetas y créditos. Con lo apartado para el SAT (${money(r.saldos.apartado_para_sat)}), tu **disponible real es ${money(r.saldos.disponible_real)}**.`;
+    if (ps.length) md += `\n\n**Presupuestos de este mes**\n\n| Categoría | Gastado | Te queda |\n| --- | --- | --- |\n${ps.map((c) => `| ${c.categoria} | ${money(c.gastado)} de ${money(c.limite)} | ${c.restante < 0 ? `**Te pasaste ${money(-c.restante)}**` : money(c.restante)} |`).join('\n')}`;
+    const alertas = ps.filter((c) => c.estado !== 'ok');
+    if (alertas.length) md += `\n\n${alertas.map((c) => `${est[c.estado]} en ${c.categoria} (${c.uso}).`).join(' ')}`;
+    if (r.metas.length) md += `\n\n**Metas**\n\n${r.metas.map((m) => `- ${m.nombre}: ${money(m.ahorrado)} de ${money(m.objetivo)} (${m.avance})`).join('\n')}`;
+    alEvento({ t: 'texto', md });
+    return;
+  }
+
+  if (/compar|contra el mes|vs\.? el mes|que el mes pasado/.test(t)) {
+    const [y, m] = ctx.hoy.split('-').map(Number);
+    const d = new Date(Date.UTC(y, m - 2, 1));
+    const [py, pm] = [d.getUTCFullYear(), d.getUTCMonth() + 1];
+    const dia = Math.min(+ctx.hoy.slice(8), +fin(py, pm).slice(8));
+    alEvento({ t: 'herramienta', nombre: 'resumen_periodo' });
+    await espera(300);
+    const a = ejecutar('resumen_periodo', { desde: ini(y, m), hasta: ctx.hoy });
+    alEvento({ t: 'herramienta', nombre: 'resumen_periodo' });
+    await espera(300);
+    const b = ejecutar('resumen_periodo', { desde: ini(py, pm), hasta: `${ini(py, pm).slice(0, 8)}${String(dia).padStart(2, '0')}` });
+    const dif = a.gasto_real - b.gasto_real;
+    const cats = [...new Set([...a.gasto_por_categoria, ...b.gasto_por_categoria].map((c) => c.categoria))].slice(0, 6);
+    const de = (r, c) => r.gasto_por_categoria.find((x) => x.categoria === c)?.monto ?? 0;
+    alEvento({ t: 'texto', md: `Comparé del día 1 al ${+ctx.hoy.slice(8)} de cada mes, para que sea justo:
+
+| Concepto | ${MESES[pm - 1]} | ${MESES[m - 1]} |
+| --- | --- | --- |
+| Ingresos propios | ${money(b.ingresos_propios)} | ${money(a.ingresos_propios)} |
+| **Gasto real** | **${money(b.gasto_real)}** | **${money(a.gasto_real)}** |
+${cats.map((c) => `| ${c} | ${money(de(b, c))} | ${money(de(a, c))} |`).join('\n')}
+| Ahorro | ${money(b.ahorro)} | ${money(a.ahorro)} |
+
+${dif > 0 ? `Este mes llevas **${money(dif)} más** de gasto que el mes pasado a estas alturas.` : dif < 0 ? `Este mes llevas **${money(-dif)} menos** de gasto que el mes pasado a estas alturas. ¡Bien!` : 'Vas igual que el mes pasado.'}` });
+    return;
+  }
+
+  const enCat = t.match(/(?:gaste|gastado|llevo|pague|se me fue)\s+(?:\w+\s+)?en\s+([a-z ]+?)(?:\s+(?:en|este|el|de|del|la)\b|\?|$)/);
+  if (enCat && !/^(que|total)/.test(enCat[1])) {
+    const palabra = enCat[1].trim();
+    const [desde, hasta, nombre] = periodoDe(t, ctx.hoy);
+    const cat = CLAVES_CAT.find(([re]) => re.test(palabra))?.[1];
+    const cats = ejecutar('listar_categorias', { tipo: 'salida' }).categorias;
+    const porNombre = cats.find((c) => n(c.nombre).includes(palabra) || palabra.includes(n(c.nombre)))?.id;
+    const categoria = porNombre ?? (cats.some((c) => c.id === cat) ? cat : undefined);
+    alEvento({ t: 'herramienta', nombre: 'buscar_movimientos' });
+    await espera(400);
+    let r = ejecutar('buscar_movimientos', { desde, hasta, tipo: 'salida', ...(categoria ? { categoria } : { texto: palabra }) });
+    if (!r.total && categoria) r = ejecutar('buscar_movimientos', { desde, hasta, tipo: 'salida', texto: palabra });
+    const total = r.movimientos.reduce((s2, x) => s2 + x.monto, 0);
+    alEvento({ t: 'texto', md: r.total
+      ? `En ${nombre} gastaste **${money(total)}** en ${palabra} (${r.total} movimiento${r.total === 1 ? '' : 's'}):\n\n| Fecha | Concepto | Monto |\n| --- | --- | --- |\n${r.movimientos.slice(0, 8).map((x) => `| ${x.fecha.slice(8)}/${x.fecha.slice(5, 7)} | ${x.nota || x.categoria} | ${money(x.monto)} |`).join('\n')}${r.total > 8 ? `\n\nY ${r.total - 8} más.` : ''}`
+      : `No encontré gastos de "${palabra}" en ${nombre}. Prueba con otra palabra o con el nombre de la categoría.` });
+    return;
+  }
+
   if (/gast|ahorr|cuanto llevo|como voy|en que se me va/.test(t)) {
     const [desde, hasta, nombre] = periodoDe(t, ctx.hoy);
     alEvento({ t: 'herramienta', nombre: 'resumen_periodo' });
@@ -124,5 +189,9 @@ ${r.apartado_para_sat ? `Además apartaste ${money(r.apartado_para_sat)} para el
 - "¿Cuánto gasté este mes?"
 - "Ayer pagué 350 de gasolina con tarjeta"
 - "¿Cuánto voy a pagar al SAT?"
-- "¿Cómo voy de ahorro este año?"` });
+- "¿Cómo voy de ahorro este año?"
+- "¿Cuánto gasté en comida en octubre?"
+- "¿Cómo voy contra el mes pasado?"
+- "¿Cómo voy con mis presupuestos?"
+- "Me pagaron 8,500 por transferencia"` });
 }
