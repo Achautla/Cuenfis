@@ -1,12 +1,11 @@
 // Textos legales. Versión y fecha se registran con cada aceptación (tabla consentimientos).
-// IMPORTANTE: antes del lanzamiento, el responsable debe completar los datos marcados con [ ] y
-// conviene que un abogado revise ambos documentos.
+// Datos del responsable proporcionados por él (2026-11-27). Conviene que un abogado revise ambos documentos.
 export const VERSION_LEGAL = '2026-11-27';
 
 export const RESPONSABLE = {
-  nombre: '[Nombre completo o razón social del responsable]',
-  domicilio: '[Domicilio completo en México]',
-  correo: '[correo de privacidad, p. ej. privacidad@tu-dominio.mx]',
+  nombre: 'Brayand Axel Achautla Hernández',
+  domicilio: 'Calle Reforma Sur número 4, colonia Vicente Guerrero, Comalcalco, Tabasco, México',
+  correo: 'cuenfis.soporte@gmail.com',
   sitio: 'https://achautla.github.io/Cuenfis/',
 };
 
