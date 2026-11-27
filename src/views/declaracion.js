@@ -5,6 +5,7 @@ import { params } from '../core/fiscal.js';
 import { regimenesEnRango } from '../core/regimen.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, money, pct, nombreMes, fechaLarga, toast } from '../ui/dom.js';
+import { confirmar } from '../ui/confirmar.js';
 import '../styles/views/declaracion.css';
 
 let tab = null, mesSel = null, anioSel = null;
@@ -47,9 +48,17 @@ function acuseHTML(clave) {
 
 function enlazarAcuse(main, clave) {
   const guardar = (cambios, msg) => { aplicar((s) => guardarAcuse(s, clave, cambios)); if (msg) toast(msg, icon('check-circle')); };
-  $('#numOp', main)?.addEventListener('change', (e) => guardar({ numOperacion: e.target.value.trim() }, 'Número de operación guardado'));
+  $('#numOp', main)?.addEventListener('change', async (e) => {
+    const antes = getEstado().declaraciones?.[clave]?.acuse?.numOperacion;
+    const nuevo = e.target.value.trim();
+    if (antes && antes !== nuevo && !(await confirmar({ titulo: nuevo ? '¿Reemplazar el número de operación?' : '¿Borrar el número de operación?', accion: nuevo ? 'Reemplazar' : 'Borrar', texto: `El guardado es ${antes}. Es tu comprobante ante el SAT.` }))) { e.target.value = antes; return; }
+    guardar({ numOperacion: nuevo }, 'Número de operación guardado');
+  });
   $('#lineaCap', main)?.addEventListener('change', (e) => guardar({ lineaCaptura: e.target.value.trim().toUpperCase() }, 'Línea de captura guardada'));
-  $('#quitarAcuse', main)?.addEventListener('click', () => guardar({ archivo: undefined, nombre: undefined }, 'Archivo quitado'));
+  $('#quitarAcuse', main)?.addEventListener('click', async () => {
+    if (!(await confirmar({ titulo: '¿Quitar el archivo del acuse?', accion: 'Quitar archivo', texto: 'Se borra de este dispositivo. El número de operación se conserva. Si no tienes otra copia, puedes descargarla de nuevo del portal del SAT.' }))) return;
+    guardar({ archivo: undefined, nombre: undefined }, 'Archivo quitado');
+  });
   $('#fileAcuse', main)?.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -179,8 +188,20 @@ export function render(main) {
   $('#selMes', main)?.addEventListener('change', (e) => { mesSel = e.target.value; render(main); });
   $('#selAnio', main)?.addEventListener('change', (e) => { anioSel = +e.target.value; render(main); });
   if (m && tab !== 'anual') enlazarAcuse(main, mesSel);
-  main.querySelectorAll('[data-est]').forEach((b) => (b.onclick = () => {
+  main.querySelectorAll('[data-est]').forEach((b) => (b.onclick = async () => {
     const est = b.dataset.est === 'pagada' && !m.totalPagar ? 'presentada' : b.dataset.est;
+    const cta = getEstado().cuentas.find((c) => c.id === $('#ctaPago', main)?.value);
+    const mesN = nombreMes(mesSel);
+    const tieneAcuse = !!getEstado().declaraciones?.[mesSel]?.acuse;
+    const conf = est === 'pagada'
+      ? { titulo: `¿Marcar ${mesN} como pagada?`, accion: `Registrar pago de ${money(m.totalPagar)}`, peligro: false,
+          efectos: [`Se registra una salida "Pago al SAT" por ${money(m.totalPagar)} desde ${cta?.nombre ?? 'tu cuenta'} con fecha de hoy.`, 'Tu bolsa SAT de ese mes queda en cero.', 'Hazlo solo cuando el banco ya haya cobrado tu línea de captura.'] }
+      : est === 'presentada'
+        ? { titulo: `¿Marcar ${mesN} como presentada?`, accion: 'Marcar presentada', peligro: false,
+            efectos: [m.totalPagar ? `Queda pendiente el pago de ${money(m.totalPagar)}.` : 'Es una declaración en ceros: no hay nada que pagar.', 'Podrás guardar el número de operación y el acuse.'] }
+        : { titulo: `¿Regresar ${mesN} a pendiente?`, accion: 'Regresar a pendiente',
+            efectos: [...(m.estado === 'pagada' && m.totalPagar ? [`Se borra la salida "Pago al SAT" de ${money(m.declaracion?.monto ?? m.totalPagar)} y tu saldo vuelve a subir.`] : []), tieneAcuse ? 'Tu acuse y número de operación se conservan.' : 'No tienes acuse guardado para ese mes.', 'Úsalo solo si lo marcaste por error.'] };
+    if (!(await confirmar(conf))) return;
     aplicar((s) => marcarDeclaracion(s, mesSel, est, { cuenta: $('#ctaPago', main)?.value, fecha: foto.hoy, hoy: foto.hoy }));
     toast(est === 'pagada' ? 'Declaración pagada: se registró el pago al SAT' : est === 'presentada' ? 'Declaración marcada como presentada' : 'Declaración regresó a pendiente', icon('check-circle'));
   }));

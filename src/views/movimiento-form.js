@@ -5,7 +5,8 @@ import { calcular } from '../core/motor.js';
 import { agregarMovimiento, editarMovimiento, borrarMovimiento, guardarRecurrente, nuevoId } from '../data/acciones.js';
 import { getEstado, getFoto, aplicar } from '../data/store.js';
 import { icon } from '../ui/icons.js';
-import { $, $$, esc, money, hoyISO, toast, fechaLarga } from '../ui/dom.js';
+import { $, $$, esc, money, hoyISO, toast, fechaLarga, nombreMes } from '../ui/dom.js';
+import { confirmar } from '../ui/confirmar.js';
 import { desgloseHTML, detalleTexto, chipsFiscales } from './comun.js';
 import { cruceDeUmbral } from '../core/presupuestos.js';
 import { ym } from '../core/motor.js';
@@ -14,7 +15,7 @@ import '../styles/views/movimiento-form.css';
 const dlg = () => $('#dlg');
 const TIPOS = { entrada: ['Entrada', 'arrow-down-left'], salida: ['Salida', 'arrow-up-right'], transferencia: ['Transferencia', 'swap'] };
 
-function cerrar() { dlg().close(); }
+function cerrar() { dlg().oncancel = null; dlg().close(); }
 
 /** Abre el formulario. `mov` existente = edición. */
 export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } = {}) {
@@ -141,20 +142,43 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
   const todo = () => { pintarCategorias(); pintarExtra(); pintarPreview(); };
   todo();
 
+  // Candado: no perder lo capturado por un toque accidental en Cancelar, la X o la tecla Esc
+  let sucio = false;
+  const intentarCerrar = async () => {
+    if (sucio && !(await confirmar({ titulo: mov ? '¿Descartar los cambios?' : '¿Descartar este movimiento?', accion: 'Descartar', texto: 'Lo que capturaste no se guardará.' }))) return;
+    cerrar();
+  };
+  d.oncancel = (ev) => { ev.preventDefault(); intentarCerrar(); };
+
   f.addEventListener('click', (ev) => {
+    if (ev.target.closest('[data-t], [data-c], [data-p]')) sucio = true;
     const t = ev.target.closest('[data-t]'); if (t) { leer(); draft.tipo = t.dataset.t; $$('#fTipo button', d).forEach((b) => b.setAttribute('aria-pressed', b === t)); todo(); return; }
     const c = ev.target.closest('[data-c]'); if (c) { leer(); draft.categoria = c.dataset.c; $$('.catgrid [data-c]', d).forEach((b) => b.setAttribute('aria-checked', b === c)); pintarExtra(); pintarPreview(); return; }
     const pg = ev.target.closest('[data-p]'); if (pg) { leer(); draft.pagador = pg.dataset.p; pintarExtra(); pintarPreview(); return; }
-    if (ev.target.closest('[data-x]')) cerrar();
-    if (ev.target.closest('[data-del]')) { aplicar((s) => borrarMovimiento(s, draft.id)); cerrar(); toast('Movimiento borrado', icon('trash')); }
+    if (ev.target.closest('[data-x]')) intentarCerrar();
+    if (ev.target.closest('[data-del]')) borrar();
   });
+  const borrar = async () => {
+    const e = getEstado();
+    const fac = (e.facturas ?? []).find((x) => x.movId === mov.id);
+    const dec = e.declaraciones?.[mov.fecha.slice(0, 7)];
+    const efectos = [`${categoria(mov.categoria).nombre ?? 'Transferencia'} por ${money(mov.monto)} del ${fechaLarga(mov.fecha)}.`];
+    if (fac) efectos.push(`Es el cobro de la factura de ${fac.cliente}: volverá a quedar "por cobrar".`);
+    if (dec && dec.estado !== 'pendiente' && categoria(mov.categoria).reg) efectos.push(`La declaración de ${nombreMes(mov.fecha.slice(0, 7))} ya está marcada como ${dec.estado}: cambiarían sus números y quizá debas presentar una complementaria.`);
+    if (mov.recurrente) efectos.push('Viene de un recurrente; esa fecha no volverá a pedirse.');
+    efectos.push('Se recalculan tus saldos, impuestos y presupuestos.');
+    if (!(await confirmar({ titulo: '¿Borrar este movimiento?', accion: 'Borrar movimiento', efectos }))) return;
+    aplicar((s) => borrarMovimiento(s, draft.id)); cerrar(); toast('Movimiento borrado', icon('trash'));
+  };
+  f.addEventListener('change', () => { sucio = true; });
   f.addEventListener('input', (ev) => {
+    sucio = true;
     const n = ev.target.name; leer();
     if (n === 'fecha') { pintarCategorias(); pintarExtra(); }
     if (n === 'cfdi' || n === 'cuenta') pintarExtra();
     confirmarNegativo = false; pintarPreview();
   });
-  f.addEventListener('submit', (ev) => {
+  f.addEventListener('submit', async (ev) => {
     ev.preventDefault(); leer();
     if (!(draft.monto > 0)) { $('#hintMonto', d).textContent = 'Escribe un monto mayor a cero.'; f.monto.focus(); return; }
     if (draft.tipo === 'transferencia' && !draft.cuentaDestino) { toast('Agrega otra cuenta en Ajustes para transferir'); return; }
@@ -162,6 +186,13 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     const c = sim.cuentas.find((x) => x.id === draft.cuenta);
     if (draft.tipo !== 'entrada' && c && !c.esDeuda && c.saldo < 0 && !confirmarNegativo) { confirmarNegativo = true; pintarPreview(); return; }
     const limpio = Object.fromEntries(Object.entries(draft).filter(([, v]) => v !== undefined && v !== ''));
+    // Candado: cambiar un mes ya declarado
+    const decls = getEstado().declaraciones ?? {};
+    const fiscal = (x) => x && (categoria(x.categoria).reg || categoria(x.categoria).clase === 'actividad');
+    const mesesDecl = [...new Set([mov && fiscal(mov) ? mov.fecha.slice(0, 7) : null, fiscal(draft) ? draft.fecha.slice(0, 7) : null])]
+      .filter((k) => k && decls[k]?.estado && decls[k].estado !== 'pendiente');
+    if (mesesDecl.length && !(await confirmar({ titulo: `¿${mov ? 'Cambiar' : 'Agregar'} un movimiento de un mes ya declarado?`, accion: 'Guardar de todos modos', peligro: false,
+      efectos: [`${mesesDecl.map(nombreMes).join(' y ')} ya está marcado como ${mesesDecl.map((k) => decls[k].estado).join(' / ')}.`, 'Sus cálculos cambiarán y el SAT ya tiene los números anteriores: quizá debas presentar una declaración complementaria.'] }))) return;
     const antes = getFoto();
     if (mov) aplicar((s) => editarMovimiento(s, mov.id, limpio));
     else aplicar((s) => agregarMovimiento(s, limpio));

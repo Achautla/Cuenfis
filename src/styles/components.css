@@ -142,3 +142,16 @@ dialog::backdrop { background: rgba(5, 15, 30, .5); }
 }
 .avatar.sm { width: 32px; height: 32px; border-radius: 10px; } .avatar.sm svg.i { width: 16px; height: 16px; }
 a.notice.action { text-decoration: none; transition: filter var(--t-fast); } a.notice.action:hover { filter: brightness(.97); }
+/* Candado de confirmación */
+dialog.conf { width: min(420px, calc(100vw - 32px)); max-width: 420px; margin: auto; border-radius: var(--r-lg); }
+.conf-body { padding: 24px 24px 8px; display: grid; gap: 10px; justify-items: start; }
+.conf-body h2 { font-size: 18px; }
+.conf-body p { color: var(--ink-2); font-size: 14px; margin: 0; }
+.conf-body ul { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 14px; display: grid; gap: 4px; }
+.conf-body .field { width: 100%; margin: 4px 0 0; }
+.conf-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.conf-ico.danger { background: color-mix(in srgb, var(--out) 12%, transparent); color: var(--out); }
+.conf-foot { display: flex; gap: 8px; justify-content: flex-end; padding: 16px 24px 20px; flex-wrap: wrap; }
+.btn.danger-solid { background: var(--out); border-color: var(--out); color: #fff; }
+.btn.danger-solid:hover { filter: brightness(.95); background: var(--out); }
+@media (max-width: 899px) { dialog.conf { width: calc(100vw - 32px); max-width: calc(100vw - 32px); margin: auto; border-radius: var(--r-lg); } }

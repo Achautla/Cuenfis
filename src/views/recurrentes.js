@@ -5,6 +5,7 @@ import { pendientesRecurrentes, proximaOcurrencia } from '../core/agenda.js';
 import { guardarRecurrente, borrarRecurrente, confirmarRecurrente, omitirRecurrente, nuevoId } from '../data/acciones.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, money, fechaLarga, fechaCorta, toast } from '../ui/dom.js';
+import { confirmar } from '../ui/confirmar.js';
 import '../styles/views/recurrentes.css';
 
 const FREC = { mensual: 'Cada mes', quincenal: 'Cada quincena', semanal: 'Cada semana' };
@@ -101,12 +102,18 @@ export function render(main) {
       aplicar((s) => confirmarRecurrente(s, li.dataset.id, li.dataset.fecha, monto));
       toast('Movimiento registrado', icon('check-circle'));
     };
-    li.querySelector('[data-skip]').onclick = () => { aplicar((s) => omitirRecurrente(s, li.dataset.id, li.dataset.fecha)); toast('Omitido esta vez'); };
+    li.querySelector('[data-skip]').onclick = async () => {
+      const rec = recs.find((x) => x.id === li.dataset.id);
+      if (!(await confirmar({ titulo: `¿Omitir ${rec.nombre} del ${fechaLarga(li.dataset.fecha)}?`, accion: 'Omitir esta vez', peligro: false, texto: 'No se registrará ningún movimiento para esa fecha y ya no se volverá a pedir. Úsalo si ese mes no hubo pago o cobro.' }))) return;
+      aplicar((s) => omitirRecurrente(s, li.dataset.id, li.dataset.fecha)); toast('Omitido esta vez'); };
   });
   main.querySelectorAll('.rec-list li').forEach((li) => {
     const id = li.dataset.id;
     li.querySelector('[data-edit]').onclick = () => { editando = id; render(main); $('#fRec', main).scrollIntoView({ behavior: 'smooth' }); };
     li.querySelector('[data-pausa]').onclick = () => { const x = recs.find((y) => y.id === id); aplicar((s) => guardarRecurrente(s, { id, pausado: !x.pausado })); };
-    li.querySelector('[data-del]').onclick = () => { aplicar((s) => borrarRecurrente(s, id)); toast('Recurrente borrado. Sus movimientos ya registrados se quedan.', icon('trash')); };
+    li.querySelector('[data-del]').onclick = async () => {
+      const x = recs.find((y) => y.id === id);
+      if (!(await confirmar({ titulo: `¿Borrar el recurrente ${x.nombre}?`, accion: 'Borrar recurrente', efectos: ['Ya no te pediremos confirmarlo.', 'Los movimientos que ya registraste con él se quedan.', 'Si solo quieres detenerlo un tiempo, usa Pausar.'] }))) return;
+      aplicar((s) => borrarRecurrente(s, id)); toast('Recurrente borrado. Sus movimientos ya registrados se quedan.', icon('trash')); };
   });
 }

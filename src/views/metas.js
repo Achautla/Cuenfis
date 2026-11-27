@@ -4,6 +4,7 @@ import { guardarMeta, borrarMeta, nuevoId } from '../data/acciones.js';
 import { periodo, rangoMes, ym } from '../core/motor.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, money, pct, fechaLarga, toast } from '../ui/dom.js';
+import { confirmar } from '../ui/confirmar.js';
 import '../styles/views/metas.css';
 
 const ICONOS = { emergencia: 'lifebuoy', viaje: 'car', retiro: 'piggy', estudio: 'graduation', compra: 'gift', otra: 'target' };
@@ -84,11 +85,16 @@ export function render(main) {
   main.querySelectorAll('.meta').forEach((card) => {
     const id = card.dataset.id, m = metas.find((x) => x.id === id);
     card.querySelector('[data-edit]').onclick = () => { editando = id; render(main); $('#fMeta', main).scrollIntoView({ behavior: 'smooth' }); };
-    card.querySelector('[data-del]').onclick = () => { aplicar((s) => borrarMeta(s, id)); toast('Meta borrada', icon('trash')); };
+    card.querySelector('[data-del]').onclick = async () => {
+      const p = progresoMeta(m, foto);
+      if (!(await confirmar({ titulo: `¿Borrar la meta ${m.nombre}?`, accion: 'Borrar meta', efectos: [p.cuenta ? `Tu dinero sigue en ${p.cuenta.nombre}; solo se borra el seguimiento.` : `Se pierde el registro de ${money(p.actual)} abonados a mano (tu dinero no se mueve).`, 'No se puede deshacer.'] }))) return;
+      aplicar((s) => borrarMeta(s, id)); toast('Meta borrada', icon('trash')); };
     card.querySelector('[data-abonar]')?.addEventListener('click', () => { abonando = id; render(main); main.querySelector('[data-abono] input')?.focus(); });
     card.querySelector('[data-cerrar]')?.addEventListener('click', () => { abonando = null; render(main); });
     const fa = card.querySelector('[data-abono]');
-    if (fa) fa.onsubmit = (ev) => { ev.preventDefault(); const v = Number(fa.v.value) || 0; abonando = null;
+    if (fa) fa.onsubmit = async (ev) => { ev.preventDefault(); const v = Number(fa.v.value) || 0;
+      if (v < 0 && !(await confirmar({ titulo: `¿Retirar ${money(-v)} de ${m.nombre}?`, accion: 'Retirar', peligro: false, texto: 'Escribiste un monto negativo: se resta de lo que llevas ahorrado.' }))) return;
+      abonando = null;
       aplicar((s) => guardarMeta(s, { id, aportado: Math.max(0, (Number(m.aportado) || 0) + v) })); toast(v >= 0 ? `Abonaste ${money(v)}` : `Retiraste ${money(-v)}`, icon('piggy')); };
   });
 }

@@ -105,7 +105,11 @@ export function marcarDeclaracion(estado, clave, nuevoEstado, { cuenta, fecha, h
   if (!mes) return estado;
   let movimientos = estado.movimientos.filter((m) => !(m.categoria === 'impuestos' && m.declaracion === clave));
   const declaraciones = { ...estado.declaraciones };
-  if (nuevoEstado === 'pendiente') delete declaraciones[clave];
+  if (nuevoEstado === 'pendiente') {
+    // Conserva el acuse si ya se había guardado: regresar a pendiente no debe perder documentos
+    if (declaraciones[clave]?.acuse) declaraciones[clave] = { acuse: declaraciones[clave].acuse };
+    else delete declaraciones[clave];
+  }
   else declaraciones[clave] = { ...(declaraciones[clave] ?? {}), estado: nuevoEstado, monto: mes.totalPagar, isr: mes.isrCargo, iva: mes.ivaCargo, fecha: fecha ?? hoy };
   if (nuevoEstado === 'pagada' && mes.totalPagar > 0) {
     movimientos = [...movimientos, { id: nuevoId(), tipo: 'salida', categoria: 'impuestos', declaracion: clave,

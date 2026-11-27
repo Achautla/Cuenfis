@@ -6,6 +6,7 @@ import { vigente, categoriaDeCobro, regimenesEn } from '../core/regimen.js';
 import { guardarFactura, cobrarFactura, cancelarFactura, nuevoId } from '../data/acciones.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, money, fechaLarga, fechaCorta, toast } from '../ui/dom.js';
+import { confirmar } from '../ui/confirmar.js';
 import '../styles/views/clientes.css';
 
 let filtro = 'pendiente';
@@ -114,7 +115,9 @@ export function render(main) {
   main.querySelectorAll('.fac-list li').forEach((li) => {
     const f = facturas.find((x) => x.id === li.dataset.id);
     li.querySelector('[data-cobrar]')?.addEventListener('click', () => abrirCobro(f, main));
-    li.querySelector('[data-cancelar]')?.addEventListener('click', () => { aplicar((s) => cancelarFactura(s, f.id)); toast('Factura cancelada. Recuerda cancelarla también ante el SAT.', icon('info')); });
+    li.querySelector('[data-cancelar]')?.addEventListener('click', async () => {
+      if (!(await confirmar({ titulo: `¿Cancelar la factura de ${f.cliente}?`, accion: 'Cancelar factura', efectos: [`Por ${money(recibidoDeFactura(f))}${f.folio ? `, folio ${f.folio}` : ''}.`, 'Deja de contar como por cobrar y no se puede volver a cobrar aquí.', 'Esto no la cancela ante el SAT: hazlo también en el portal.'] }))) return;
+      aplicar((s) => cancelarFactura(s, f.id)); toast('Factura cancelada. Recuerda cancelarla también ante el SAT.', icon('info')); });
   });
   const form = $('#fFac', main);
   const leer = () => { const d = new FormData(form); const t = d.get('tasaIva'); return { cliente: d.get('cliente').trim(), concepto: d.get('concepto').trim(), subtotal: Number(d.get('subtotal')), tasaIva: t === 'exento' ? 'exento' : Number(t), pagador: d.get('pagador'), folio: d.get('folio').trim() || undefined, fecha: d.get('fecha'), vence: d.get('vence') || undefined }; };
