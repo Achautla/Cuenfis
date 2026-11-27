@@ -32,9 +32,9 @@ Las notificaciones push con la app cerrada (Firebase Cloud Messaging) necesitan 
 ## Noticias automáticas (prueba con fuentes gratuitas)
 La función `noticias-rss` corre cada 4 horas (pg_cron, minuto 17). Lee RSS gratuitos:
 - Medios: El Economista, El Financiero (Economía) y Expansión (Economía).
-- Oficiales: SAT, Banxico, Condusef, Profeco y Hacienda no tienen RSS propio; se leen sus comunicados con búsquedas de Google Noticias (`site:gob.mx/sat`, etc.).
+- Oficiales: SAT, Condusef, Profeco y Hacienda no tienen RSS; se lee la sala de prensa pública de cada una en gob.mx. Banxico no tiene un canal de comunicados que funcione, así que sus anuncios llegan por los medios.
 
-Toma solo notas de los últimos 3 días que no haya visto antes, y Haiku decide cuáles sirven a las finanzas personales, les pone temas y regímenes, y escribe un resumen propio de una o dos frases. Se guarda título, resumen y enlace (nunca el texto de la nota). Las que no sirven se guardan ocultas (`publicada = false`) para no pagarlas dos veces. Lo automático de más de 45 días se borra solo.
+Toma solo notas de los últimos 3 días (10 para las oficiales) que no haya visto antes, y Haiku decide cuáles sirven a las finanzas personales, les pone temas y regímenes, y escribe un resumen propio de una o dos frases. Se guarda título, resumen y enlace (nunca el texto de la nota). Las que no sirven se guardan ocultas (`publicada = false`) para no pagarlas dos veces. Lo automático de más de 45 días se borra solo.
 
 En la app cada noticia automática dice "Resumen automático con IA", trae su × para ocultarla, y hay un botón para ocultar todas las de medios en ese dispositivo.
 
