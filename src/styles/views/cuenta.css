@@ -15,3 +15,5 @@
 .mobile-top .sync-chip { margin-left: auto; }
 .mobile-top .sync-chip span { display: none; }
 .cu-aviso { margin: 0; }
+.cu-huella { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.cu-huella > span:nth-child(2) { flex: 1; display: grid; gap: 2px; }
