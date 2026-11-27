@@ -62,3 +62,9 @@
   .sidebar { overflow-y: auto; }
   .nav a { padding: 8px 12px; }
 }
+.nav a, .nav .mas, .mas-list a { position: relative; }
+.badge { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--out); color: #fff; font-size: 11px; font-weight: 700; display: inline-grid; place-items: center; line-height: 1; }
+.nav a .badge { margin-left: auto; }
+.mas-list a .badge { margin-left: auto; }
+@media (max-width: 899px) { .nav .mas .badge { position: absolute; top: 0; right: 2px; } }
+.sidebar .sync-chip { margin: 12px 8px 0; }

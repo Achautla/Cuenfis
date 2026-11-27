@@ -6,6 +6,7 @@ import { regimenesEnRango } from '../core/regimen.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, money, pct, nombreMes, fechaLarga, toast } from '../ui/dom.js';
 import { confirmar } from '../ui/confirmar.js';
+import * as nube from '../data/nube.js';
 import '../styles/views/declaracion.css';
 
 let tab = null, mesSel = null, anioSel = null;
@@ -41,8 +42,9 @@ function acuseHTML(clave) {
       <label class="field"><span>Línea de captura (opcional)</span><input id="lineaCap" maxlength="40" value="${esc(a.lineaCaptura ?? '')}" style="text-transform:uppercase" /></label>
     </div>
     <div class="row">
-      ${a.archivo ? `<a class="btn sm" href="${a.archivo}" download="${esc(a.nombre ?? `acuse-${clave}`)}">${icon('download')}${esc(a.nombre ?? 'Descargar acuse')}</a><button class="btn ghost sm" id="quitarAcuse">${icon('trash')}Quitar archivo</button>`
-        : `<label class="btn sm">${icon('upload')}Adjuntar PDF o foto<input type="file" id="fileAcuse" accept="application/pdf,image/*" hidden /></label><span class="small muted">Hasta 1.5 MB. Se guarda en este dispositivo.</span>`}
+      ${a.ruta ? `<button class="btn sm" id="verAcuse">${icon('download')}${esc(a.nombre ?? 'Ver acuse')}</button><button class="btn ghost sm" id="quitarAcuse">${icon('trash')}Quitar archivo</button>`
+        : a.archivo ? `<a class="btn sm" href="${a.archivo}" download="${esc(a.nombre ?? `acuse-${clave}`)}">${icon('download')}${esc(a.nombre ?? 'Descargar acuse')}</a><button class="btn ghost sm" id="quitarAcuse">${icon('trash')}Quitar archivo</button>`
+        : `<label class="btn sm">${icon('upload')}Adjuntar PDF o foto<input type="file" id="fileAcuse" accept="application/pdf,image/*" hidden /></label><span class="small muted">${nube.getUsuario() ? 'Hasta 5 MB. Se guarda en tu nube privada.' : 'Hasta 1.5 MB. Se guarda en este dispositivo.'}</span>`}
     </div></div>`;
 }
 
@@ -56,12 +58,28 @@ function enlazarAcuse(main, clave) {
   });
   $('#lineaCap', main)?.addEventListener('change', (e) => guardar({ lineaCaptura: e.target.value.trim().toUpperCase() }, 'Línea de captura guardada'));
   $('#quitarAcuse', main)?.addEventListener('click', async () => {
-    if (!(await confirmar({ titulo: '¿Quitar el archivo del acuse?', accion: 'Quitar archivo', texto: 'Se borra de este dispositivo. El número de operación se conserva. Si no tienes otra copia, puedes descargarla de nuevo del portal del SAT.' }))) return;
-    guardar({ archivo: undefined, nombre: undefined }, 'Archivo quitado');
+    const a = getEstado().declaraciones?.[clave]?.acuse ?? {};
+    if (!(await confirmar({ titulo: '¿Quitar el archivo del acuse?', accion: 'Quitar archivo', texto: `Se borra ${a.ruta ? 'de tu nube' : 'de este dispositivo'}. El número de operación se conserva. Si no tienes otra copia, puedes descargarla de nuevo del portal del SAT.` }))) return;
+    if (a.ruta && nube.getUsuario()) { try { await nube.borrarAcuse(a.ruta); } catch { /* se limpia la referencia de todos modos */ } }
+    guardar({ archivo: undefined, nombre: undefined, ruta: undefined }, 'Archivo quitado');
   });
-  $('#fileAcuse', main)?.addEventListener('change', (e) => {
+  $('#verAcuse', main)?.addEventListener('click', async () => {
+    const a = getEstado().declaraciones?.[clave]?.acuse ?? {};
+    if (!nube.getUsuario()) { toast('Inicia sesión para ver el acuse guardado en tu nube', icon('cloud')); return; }
+    const w = window.open('', '_blank');
+    try { const url = await nube.urlAcuse(a.ruta); if (w) w.location = url; else location.href = url; }
+    catch (e) { w?.close(); toast(e.message, icon('alert')); }
+  });
+  $('#fileAcuse', main)?.addEventListener('change', async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (nube.getUsuario()) {
+      if (file.size > 5 * 1024 * 1024) { toast('El archivo pesa más de 5 MB. Prueba con el PDF del SAT o una foto más ligera.', icon('alert')); return; }
+      toast('Subiendo acuse…', icon('cloud'));
+      try { const ruta = await nube.subirAcuse(clave, file); guardar({ ruta, nombre: file.name, tipo: file.type, subido: new Date().toISOString(), archivo: undefined }, 'Acuse guardado en tu nube'); }
+      catch (err) { toast(err.message, icon('alert')); }
+      return;
+    }
     if (file.size > MAX_ACUSE) { toast('El archivo pesa más de 1.5 MB. Prueba con el PDF del SAT o una foto más ligera.', icon('alert')); return; }
     const r = new FileReader();
     r.onload = () => {

@@ -1,5 +1,5 @@
 // Service worker: la app funciona sin conexión. Navegación: red primero; recursos: caché primero.
-const CACHE = 'cuenfis-v1';
+const CACHE = 'cuenfis-v2';
 const BASE = ['/', '/index.html', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png'];
 
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(BASE))); self.skipWaiting(); });
@@ -18,4 +18,15 @@ self.addEventListener('fetch', (e) => {
     if (r.ok) { const copy = r.clone(); caches.open(CACHE).then((c) => c.put(request, copy)); }
     return r;
   })));
+});
+
+// Al tocar un aviso: abre (o enfoca) la app en la pantalla del aviso
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const ruta = e.notification.data?.ruta ?? 'inicio';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((ws) => {
+    const w = ws[0];
+    if (w) { w.navigate?.(new URL(`./#/${ruta}`, self.registration.scope).href); return w.focus(); }
+    return self.clients.openWindow(`./#/${ruta}`);
+  }));
 });

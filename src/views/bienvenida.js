@@ -30,6 +30,7 @@ export function render(main) {
         <label class="check"><input type="checkbox" name="frontera" /><span>Vivo en región fronteriza norte o sur<small>Aplica IVA del 8% en tus cobros.</small></span></label>
         <button class="btn primary big">${icon('check')}Empezar</button>
         <button type="button" class="btn ghost" id="demo">${icon('sparkle')}Explorar con datos de ejemplo</button>
+        <a class="btn ghost" href="#/cuenta">${icon('cloud')}Ya tengo cuenta: iniciar sesión</a>
       </form>
       <p class="disclaimer">Cuenfis da estimaciones con las reglas fiscales 2026. No sustituye la asesoría de un contador.</p>
     </div></section>`;

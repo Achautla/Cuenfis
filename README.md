@@ -28,7 +28,10 @@ src/
     presupuestos.js  Límites por categoría con avisos al 80% y 100%
     deudas.js        Tarjetas (corte, pago para no generar intereses, mínimo, interés) y préstamos
     agenda.js        Recurrentes, metas con ahorro mensual necesario y cuentas por cobrar
-  data/            Catálogo de categorías, acciones puras sobre el estado, almacenamiento
+    recordatorios.js Avisos según el régimen: declaraciones, tarjetas, recurrentes, facturas, anual, límite RESICO
+    reporte.js       Datos del reporte para contador (PDF por impresión y Excel)
+  data/            Catálogo, acciones puras, almacenamiento local, nube.js (Supabase) y sync.js (sincronización)
+  ui/confirmar.js  Candado "¿Estás seguro?" para acciones importantes
   views/           Una pantalla por archivo (Inicio, Movimientos, Balance, Tarjetas y deudas, Recurrentes, Presupuestos, Metas, Indicadores, Declaración, Clientes y cobros, Simulador, Aprende, Ajustes)
   styles/          tokens, base, layout, componentes y un CSS por pantalla (styles/views)
 public/            manifest, service worker e íconos (PWA)
@@ -51,4 +54,18 @@ tests/             Escenarios de auditoría con resultados calculados a mano
 
 ## Datos
 
-En esta fase los datos viven en el navegador (localStorage) y se pueden respaldar en JSON desde Ajustes. El esquema de Supabase (`supabase/migrations`) ya está aplicado en el proyecto **Cuenfis** con RLS; la sincronización y el inicio de sesión llegan en la fase "App real".
+La app es **primero local**: todo funciona sin conexión y sin cuenta (localStorage, con respaldo JSON en Ajustes).
+Con sesión iniciada (Supabase Auth, correo y contraseña):
+
+- El estado completo se guarda en `public.espacios` como un documento con número de versión. Si otro dispositivo guardó
+  una versión más nueva, no se sobrescribe: la app pregunta cuál conservar.
+- Cada versión anterior queda en `public.espacios_historial` (últimas 30) y se puede restaurar desde *Cuenta y nube*.
+- Los acuses del SAT van a un bucket privado `acuses`, en la carpeta del usuario.
+- Todo con RLS: cada usuario solo puede leer y escribir lo suyo. Migraciones en `supabase/migrations`.
+
+Variables en `.env` (ver `.env.example`): la URL del proyecto y la llave **publicable**. Nunca la service_role.
+Para que los enlaces de confirmación y de recuperación de contraseña funcionen, agrega la URL donde publiques la app en
+Supabase → Authentication → URL Configuration (Site URL y Redirect URLs).
+
+Las tablas relacionales de la migración inicial (`movimientos`, `cuentas`…) quedan reservadas para reportes del lado
+del servidor en una fase posterior; hoy la fuente de verdad es el documento sincronizado.

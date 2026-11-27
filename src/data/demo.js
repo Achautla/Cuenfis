@@ -1,7 +1,26 @@
+import { marcarDeclaracion } from './acciones.js';
+
 // Datos de ejemplo: sueldo en la primera mitad del año y RESICO después. Sirven para probar la app.
 const pad = (n) => String(n).padStart(2, '0');
 
 export function datosDemo(hoy) {
+  return conDeclaraciones(armar(hoy), hoy);
+}
+
+/** Meses cerrados de RESICO ya declarados y pagados el día 15 del mes siguiente, como haría alguien al corriente. */
+function conDeclaraciones(e, hoy) {
+  const y = +hoy.slice(0, 4), mesHoy = +hoy.slice(5, 7);
+  const desde = e.perfil.regimenes.find((r) => r.reg === 'resico').desde;
+  for (let m = +desde.slice(5, 7); m < mesHoy; m++) {
+    const clave = `${y}-${pad(m)}`, pago = `${y}-${pad(m + 1)}-15`;
+    if (pago > hoy) continue;
+    e = marcarDeclaracion(e, clave, 'pagada', { cuenta: 'debito', fecha: pago, hoy });
+    e.declaraciones[clave].acuse = { numOperacion: `2600${pad(m)}48${String(1000 + m * 37).slice(-4)}` };
+  }
+  return e;
+}
+
+function armar(hoy) {
   const y = +hoy.slice(0, 4), mesHoy = +hoy.slice(5, 7);
   const f = (m, d) => `${y}-${pad(m)}-${pad(d)}`;
   const corte = Math.max(2, Math.min(mesHoy - 2, 6)); // termina el empleo unos meses antes de hoy

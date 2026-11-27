@@ -1,0 +1,12 @@
+.av-notif { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.av-notif > span:nth-child(2) { flex: 1; min-width: 200px; display: grid; gap: 2px; }
+.av-ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
+.av-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.av-list a { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: center; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md); color: var(--ink); text-decoration: none; transition: border-color var(--t-fast); }
+.av-list a:hover { border-color: var(--line-2); }
+.av-list .urgente a { border-left: 4px solid var(--out); }
+.av-list .pronto a { border-left: 4px solid var(--warn); }
+.av-list .urgente .av-ico { background: color-mix(in srgb, var(--out) 12%, transparent); color: var(--out); }
+.av-main { display: grid; gap: 2px; min-width: 0; }
+.av-f { grid-column: 2; display: flex; gap: 6px; align-items: center; color: var(--ink-3); }
+@media (min-width: 700px) { .av-list a { grid-template-columns: auto minmax(0, 1fr) auto; } .av-f { grid-column: auto; } }

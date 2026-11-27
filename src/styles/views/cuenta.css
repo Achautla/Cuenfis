@@ -1,0 +1,17 @@
+.cuenta .cu-estado { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.cuenta .cu-estado > div { display: grid; gap: 4px; justify-items: start; min-width: 0; }
+.cuenta .cu-estado b { overflow-wrap: anywhere; }
+.cuenta .cu-estado .spacer { flex: 1; }
+.cu-ico { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); flex: none; }
+.cu-form { max-width: 440px; width: 100%; display: grid; gap: 16px; }
+.cu-form .btn.full { width: 100%; justify-content: center; }
+.link-btn { background: none; border: 0; color: var(--accent); font: inherit; font-size: 14px; cursor: pointer; padding: 6px 0; justify-self: start; text-decoration: underline; text-underline-offset: 3px; }
+.cu-vers { list-style: none; margin: 10px 0 0; padding: 0; max-height: 360px; overflow-y: auto; }
+.cu-vers li { display: flex; gap: 12px; align-items: center; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid var(--line); }
+.cu-vers li > span { display: grid; min-width: 0; }
+.sync-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #b9c6d8; text-decoration: none; padding: 6px 8px; border-radius: var(--r-sm); }
+.sync-chip svg.i { width: 16px; height: 16px; }
+.sync-chip.ok svg.i { color: #6ee7b7; }
+.sync-chip.warn svg.i { color: #fbbf24; }
+.mobile-top .sync-chip { margin-left: auto; }
+.mobile-top .sync-chip span { display: none; }

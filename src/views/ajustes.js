@@ -1,6 +1,7 @@
 import { getEstado, getFoto, aplicar, reemplazar, reiniciar } from '../data/store.js';
 import { REGIMENES, TIPOS_CUENTA, categoria } from '../data/catalogo.js';
 import { confirmar } from '../ui/confirmar.js';
+import * as nube from '../data/nube.js';
 import { nuevoId } from '../data/acciones.js';
 import { datosDemo } from '../data/demo.js';
 import { icon } from '../ui/icons.js';
@@ -62,7 +63,7 @@ export function render(main) {
     <div>
       <div class="card">
         <div class="card-head"><h2>Tus datos</h2></div>
-        <p class="small muted" style="margin-bottom:12px">${icon('lock')} Por ahora tus datos se guardan solo en este dispositivo. Descarga un respaldo de vez en cuando.</p>
+        <p class="small muted" style="margin-bottom:12px">${icon('lock')} ${nube.getUsuario() ? `Con sesión iniciada (${esc(nube.getUsuario().email)}): tus datos se guardan en la nube y en este dispositivo.` : 'Tus datos se guardan solo en este dispositivo.'} <a href="#/cuenta">Cuenta y nube</a></p>
         <div class="row">
           <button class="btn" id="exp">${icon('download')}Descargar respaldo</button>
           <label class="btn">${icon('upload')}Restaurar<input type="file" id="imp" accept="application/json" hidden /></label>
@@ -148,8 +149,10 @@ export function render(main) {
   };
   $('#borrar', main).onclick = async () => {
     const ok = await confirmar({ titulo: '¿Borrar todos tus datos?', accion: 'Borrar todo', escribir: 'BORRAR',
-      efectos: [`Se borran ${e.movimientos.length} movimiento(s), tus cuentas, regímenes, metas, recurrentes y acuses de este dispositivo.`, 'No se puede deshacer. Descarga antes un respaldo si lo quieres conservar.'] });
+      efectos: [`Se borran ${e.movimientos.length} movimiento(s), tus cuentas, regímenes, metas, recurrentes y acuses de este dispositivo.`,
+        ...(nube.getUsuario() ? ['También se cierra tu sesión aquí. Tu copia en la nube NO se borra: para eso usa "Borrar mis datos de la nube" en Cuenta y nube.'] : ['No se puede deshacer. Descarga antes un respaldo si lo quieres conservar.'])] });
     if (!ok) return;
+    if (nube.getUsuario()) await nube.salir();
     reiniciar(); location.hash = '#/inicio';
   };
 }
