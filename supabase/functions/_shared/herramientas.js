@@ -10,6 +10,9 @@ export const CLAVES_REGLAS = [
 
 const FECHA = { type: 'string', description: 'Fecha AAAA-MM-DD' };
 
+/** Casillas del portal que explica guia_casilla (deben coincidir con src/ia/casillas.js). */
+export const CASILLAS_DECLARACION = ['isr_ingresos', 'isr_tasa', 'isr_determinado', 'isr_retenido', 'isr_cargo', 'iva_16', 'iva_8', 'iva_0', 'iva_total', 'iva_retenido', 'iva_acreditable', 'iva_favor', 'iva_cargo', 'anual_ingresos', 'anual_retenido', 'anual_deducciones', 'anual_base', 'anual_isr'];
+
 export const HERRAMIENTAS = [
   {
     name: 'resumen_periodo',
@@ -51,9 +54,19 @@ export const HERRAMIENTAS = [
     input_schema: { type: 'object', properties: { anio: { type: 'integer' } }, required: ['anio'], additionalProperties: false },
   },
   {
+    name: 'guia_casilla',
+    description: 'Qué va en una casilla del portal del SAT, su valor para el periodo (calculado por Cuenfis, también redondeado a pesos como lo pide el portal), una explicación sencilla y su fundamento. Úsala cuando el usuario pregunte qué poner en su declaración.',
+    input_schema: { type: 'object', properties: { casilla: { type: 'string', enum: CASILLAS_DECLARACION }, periodo: { type: 'string', description: 'AAAA-MM para ISR e IVA mensual; AAAA para la anual' } }, required: ['casilla', 'periodo'], additionalProperties: false },
+  },
+  {
     name: 'regla_fiscal',
     description: 'Valor de una regla fiscal de un año y su fuente oficial (documento, artículo y publicación). Úsala antes de mencionar cualquier tasa, tarifa o tope.',
     input_schema: { type: 'object', properties: { clave: { type: 'string', enum: CLAVES_REGLAS }, anio: { type: 'integer' } }, required: ['clave', 'anio'], additionalProperties: false },
+  },
+  {
+    name: 'proponer_recuerdo',
+    description: 'Propone guardar en la memoria del usuario un dato útil y duradero sobre sus preferencias o metas (por ejemplo, "quiere juntar para el enganche de un auto en 2027"). El usuario decide si se guarda. Nunca propongas datos sensibles (RFC, CURP, cuentas, tarjetas, contraseñas, salud).',
+    input_schema: { type: 'object', properties: { texto: { type: 'string', description: 'Máximo 200 caracteres, en tercera persona' } }, required: ['texto'], additionalProperties: false },
   },
   {
     name: 'proponer_movimiento',

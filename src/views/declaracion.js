@@ -9,12 +9,20 @@ import { icon } from '../ui/icons.js';
 import { $, esc, money, pct, nombreMes, fechaLarga, toast, descargar } from '../ui/dom.js';
 import { confirmar } from '../ui/confirmar.js';
 import * as nube from '../data/nube.js';
+import { ID_POR_ETIQUETA, CASILLAS, guiaCasilla } from '../ia/casillas.js';
+import { iaActiva } from '../ia/consentimiento.js';
+import * as conv from '../ia/conversacion.js';
 import '../styles/views/declaracion.css';
 
 let tab = null, mesSel = null, anioSel = null;
 
 // src: [clave del dato fiscal, año] para mostrar "¿De dónde sale?" (ver src/core/params/fuentes.js)
-const F = (label, op, v, help = '', tot = false, src = null) => `<div class="f${tot ? ' tot' : ''}"><span>${tot ? `<b>${esc(label)}</b>` : esc(label)}${help ? `<small>${esc(help)}</small>` : ''}${src ? chipFuente(...src) : ''}</span><span class="op">${op}</span><span class="v num">${typeof v === 'number' ? money(v).replace('$', '') : esc(v)}</span></div>`;
+let periodoGuia = null; // periodo de las casillas que se están pintando (AAAA-MM o AAAA)
+const preguntaBtn = (label) => {
+  const id = ID_POR_ETIQUETA[label];
+  return id && iaActiva() ? `<button type="button" class="f-ia" data-casilla="${id}" data-periodo="${periodoGuia}" aria-label="Preguntar al asistente qué poner en ${esc(label)}">${icon('sparkle')}<span>¿Qué pongo aquí?</span></button>` : '';
+};
+const F = (label, op, v, help = '', tot = false, src = null) => `<div class="f${tot ? ' tot' : ''}"><span>${tot ? `<b>${esc(label)}</b>` : esc(label)}${help ? `<small>${esc(help)}</small>` : ''}${src || ID_POR_ETIQUETA[label] ? `<span class="f-acc">${src ? chipFuente(...src) : ''}${preguntaBtn(label)}</span>` : ''}</span><span class="op">${op}</span><span class="v num">${typeof v === 'number' ? money(v).replace('$', '') : esc(v)}</span></div>`;
 
 function limite(clave) {
   const [y, m] = clave.split('-').map(Number);
@@ -96,6 +104,28 @@ function enlazarAcuse(main, clave) {
     };
     r.readAsDataURL(file);
   });
+}
+
+const PASOS_MENSUAL = [
+  ['Entra al portal', 'En sat.gob.mx busca <b>Declaraciones</b> y elige la de pagos provisionales o definitivos. Inicia sesión con tu RFC y contraseña o con tu e.firma.'],
+  ['Configura la declaración', 'Ejercicio y periodo del mes, periodicidad <b>Mensual</b>, tipo <b>Normal</b>. Marca las obligaciones <b>ISR simplificado de confianza</b> e <b>IVA simplificado de confianza</b>.'],
+  ['Revisa el prellenado', 'El portal trae tus facturas cobradas. Compara cada casilla con esta pantalla; si algo no coincide, toca «¿Qué pongo aquí?».'],
+  ['Captura sin centavos', 'El portal pide pesos enteros. Usa «Copiar cifras» para tenerlas a la mano ya redondeadas.'],
+  ['Envía y paga', 'Envía la declaración, descarga la línea de captura y págala en tu banco antes de la fecha límite.'],
+  ['Guarda tu acuse aquí', 'Marca el mes como presentado o pagado y guarda el número de operación y el acuse más abajo.'],
+];
+
+function guia(m) {
+  const filas = Object.values(CASILLAS).filter((c) => c[0] === 'isr' || c[0] === 'iva');
+  const cifras = filas.map((c) => [c[0].toUpperCase(), c[2], c[3](m)]).filter(([, , v]) => typeof v === 'number');
+  const texto = `Declaración ${nombreMes(m.clave)} (estimación Cuenfis)\n` + cifras.map(([t, l, v]) => `${t} · ${l}: ${Math.round(v)}`).join('\n') + `\nTotal a pagar: ${Math.round(m.totalPagar)}`;
+  return `<details class="card guia" ${m.estado === 'pendiente' ? 'open' : ''}>
+    <summary><span class="guia-ico">${icon('file')}</span><span><b>Guía para presentarla en el portal del SAT</b><small>${PASOS_MENSUAL.length} pasos · total estimado a pagar ${money(m.totalPagar)}</small></span></summary>
+    <ol class="guia-pasos">${PASOS_MENSUAL.map(([t, d]) => `<li><b>${t}</b><span>${d}</span></li>`).join('')}</ol>
+    <div class="row"><button type="button" class="btn" id="copiarCifras" data-texto="${esc(texto)}">${icon('download')}Copiar cifras</button>
+      ${iaActiva() ? `<button type="button" class="btn primary" id="guiaIa">${icon('sparkle')}Que el asistente me guíe</button>` : '<a class="btn ghost" href="#/ajustes">Activar el asistente para que te guíe</a>'}</div>
+    <p class="small muted">Los nombres de las secciones pueden cambiar en el portal. Si algo no coincide, guíate por el nombre de la casilla.</p>
+  </details>`;
 }
 
 function isr(m) {
@@ -199,6 +229,7 @@ export function render(main) {
   if (!anios.includes(anioSel)) anioSel = anios.find((y) => y < +foto.hoy.slice(0, 4) && foto.anual(y).tieneSueldos) ?? anios[0];
   const m = foto.meses[mesSel];
 
+  periodoGuia = tab === 'anual' ? String(anioSel) : mesSel;
   main.innerHTML = `<section class="view decl">
     <div class="page-head"><div><h1>Mi declaración</h1><p class="sub">Casillas en el orden del portal del SAT. Revisa el prellenado contra estos números. El portal pide pesos sin centavos: redondea al capturar.</p></div></div>
     ${tabs.length ? `<div class="card toolbar"><div class="seg" role="group" aria-label="Declaración">${tabs.map(([k, t]) => `<button data-tab="${k}" aria-pressed="${tab === k}">${t}</button>`).join('')}</div>
@@ -207,6 +238,7 @@ export function render(main) {
         : `<label class="field inline"><span>Ejercicio</span><select id="selAnio">${anios.map((y) => `<option ${y === anioSel ? 'selected' : ''}>${y}</option>`).join('')}</select></label>`}
     </div>` : `<div class="empty card">${icon('file')}<p>Tu perfil no tiene un régimen con declaraciones. Agrégalo en Ajustes.</p><a class="btn" href="#/ajustes">Ir a Ajustes</a></div>`}
     ${avisoProvisional(tab === 'anual' ? anioSel : +(mesSel ?? foto.hoy).slice(0, 4))}
+    ${tab !== 'anual' && m ? guia(m) : ''}
     ${tab === 'isr' && m ? isr(m) + estadoMes(m) : ''}
     ${tab === 'iva' && m ? iva(m) + estadoMes(m) : ''}
     ${tab === 'anual' ? anual(anioSel) : ''}
@@ -217,6 +249,23 @@ export function render(main) {
   $('#selMes', main)?.addEventListener('change', (e) => { mesSel = e.target.value; render(main); });
   $('#selAnio', main)?.addEventListener('change', (e) => { anioSel = +e.target.value; render(main); });
   if (m && tab !== 'anual') enlazarAcuse(main, mesSel);
+  // Asistencia: cada casilla abre el asistente en modo declaración con la pregunta ya hecha
+  main.querySelectorAll('[data-casilla]').forEach((b) => (b.onclick = () => {
+    const g = guiaCasilla(b.dataset.casilla, b.dataset.periodo);
+    const cuando = /^\d{4}$/.test(b.dataset.periodo) ? `mi anual ${b.dataset.periodo}` : `mi declaración de ${nombreMes(b.dataset.periodo)}`;
+    conv.fijarModo('declaracion');
+    location.hash = '#/asistente';
+    conv.preguntar(`¿Qué pongo en «${g.casilla ?? b.dataset.casilla}» de ${cuando}?`);
+  }));
+  $('#guiaIa', main)?.addEventListener('click', () => {
+    conv.fijarModo('declaracion');
+    location.hash = '#/asistente';
+    conv.preguntar(`Guíame paso a paso con ${tab === 'iva' ? 'el IVA' : 'el ISR'} de mi declaración de ${nombreMes(mesSel)}.`);
+  });
+  $('#copiarCifras', main)?.addEventListener('click', async (ev) => {
+    try { await navigator.clipboard.writeText(ev.currentTarget.dataset.texto); toast('Cifras copiadas, ya redondeadas a pesos', icon('check-circle')); }
+    catch { toast('No se pudo copiar en este navegador. Toma las cifras de la pantalla.', icon('alert')); }
+  });
   main.querySelectorAll('[data-est]').forEach((b) => (b.onclick = async () => {
     const est = b.dataset.est === 'pagada' && !m.totalPagar ? 'presentada' : b.dataset.est;
     const cta = getEstado().cuentas.find((c) => c.id === $('#ctaPago', main)?.value);

@@ -18,3 +18,25 @@
 .acuse .field-label { display: flex; align-items: center; gap: 6px; }
 .acuse-row { display: grid; gap: 0 12px; grid-template-columns: minmax(0, 1fr); }
 @media (min-width: 700px) { .acuse-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Asistencia por casilla */
+.sat .f-acc { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.sat .f-acc .fuente-chip { margin-top: 0; }
+.f-ia { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 2px 10px; border-radius: 99px; border: 1px solid transparent; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--sat); background: var(--sat-soft); transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease), background var(--t-fast); }
+.f-ia svg { width: 13px; height: 13px; }
+.f-ia:hover { box-shadow: 0 2px 8px -2px color-mix(in srgb, var(--sat) 45%, transparent); transform: translateY(-1px); }
+.f-ia:focus-visible { outline: 2px solid var(--sat); outline-offset: 2px; }
+
+/* Guía paso a paso */
+.guia { padding: 0; overflow: hidden; margin-bottom: 16px; }
+.guia > summary { list-style: none; display: flex; gap: 12px; align-items: center; padding: 16px 20px; cursor: pointer; background: var(--grad-suave); }
+.guia > summary::-webkit-details-marker { display: none; }
+.guia > summary small { display: block; color: var(--ink-3); font-size: 13px; font-weight: 400; margin-top: 2px; }
+.guia-ico { flex: none; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: #fff; background: var(--grad-marca); box-shadow: 0 6px 14px -6px var(--accent); }
+.guia-ico svg { width: 20px; height: 20px; }
+.guia-pasos { counter-reset: paso; list-style: none; margin: 0; padding: 8px 20px 4px; display: grid; gap: 12px; }
+.guia-pasos li { counter-increment: paso; display: grid; grid-template-columns: 28px minmax(0, 1fr); column-gap: 10px; font-size: 14px; color: var(--ink-2); }
+.guia-pasos li::before { content: counter(paso); grid-row: span 2; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; color: var(--accent); background: var(--accent-soft); }
+.guia-pasos li b { color: var(--ink); }
+.guia .row { padding: 12px 20px 4px; }
+.guia > p { padding: 4px 20px 16px; margin: 0; }

@@ -73,3 +73,34 @@ export async function revisar(estado, foto) {
   ya = Object.fromEntries(Object.entries(ya).filter(([, d]) => d >= hoy.slice(0, 8) + '01' || d === hoy));
   try { localStorage.setItem(CLAVE, JSON.stringify(ya)); } catch { /* */ }
 }
+
+/* ---------- Noticias (opcional, aparte de los avisos de fechas) ---------- */
+const PREF_NOT = 'cuenfis:notif:noticias';
+const AVISADAS = 'cuenfis:noticias:avisadas';
+export const noticiasActivas = () => { try { return localStorage.getItem(PREF_NOT) === '1' && activas(); } catch { return false; } };
+export async function activarNoticias(si) {
+  if (!si) { localStorage.setItem(PREF_NOT, '0'); return 'off'; }
+  const p = activas() ? 'granted' : await activar();
+  if (p === 'granted') localStorage.setItem(PREF_NOT, '1');
+  return p;
+}
+
+/** Muestra en el dispositivo las noticias nuevas (máximo 2 por vez, cada una una sola vez). */
+export async function avisarNoticias(lista) {
+  if (!noticiasActivas()) return;
+  let ya = [];
+  try { ya = JSON.parse(localStorage.getItem(AVISADAS)) ?? []; } catch { /* */ }
+  const nuevas = lista.filter((n) => !n.leida && !ya.includes(n.id)).slice(0, 2);
+  if (!nuevas.length) return;
+  if (nativo) {
+    const ln = await LN();
+    await ln.schedule({ notifications: nuevas.map((n) => ({ id: idNum(`not-${n.id}`), title: n.titulo, body: n.resumen.slice(0, 140), schedule: { at: new Date(Date.now() + 2000) }, extra: { ruta: 'noticias' } })) });
+  } else {
+    const reg = await navigator.serviceWorker?.getRegistration?.().catch(() => null);
+    for (const n of nuevas) {
+      const opts = { body: n.resumen.slice(0, 140), tag: `not-${n.id}`, icon: (import.meta.env.BASE_URL ?? '/') + 'icons/icon-192.png', data: { ruta: 'noticias' } };
+      try { if (reg?.showNotification) await reg.showNotification(n.titulo, opts); else new Notification(n.titulo, opts).onclick = () => { window.focus(); location.hash = '#/noticias'; }; } catch { /* */ }
+    }
+  }
+  try { localStorage.setItem(AVISADAS, JSON.stringify([...ya, ...nuevas.map((n) => n.id)].slice(-200))); } catch { /* */ }
+}

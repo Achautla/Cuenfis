@@ -1,7 +1,8 @@
 // Modo demostración del asistente: respuestas simuladas, sin IA, con los mismos cálculos y pantallas.
 // Sirve para probar la experiencia antes de activar el servidor. Siempre se anuncia como demostración.
 import { ejecutar, contexto } from './herramientas.js';
-import { money, fechaLarga } from '../ui/dom.js';
+import { money, fechaLarga, pesos } from '../ui/dom.js';
+import { ID_POR_ETIQUETA, CASILLAS } from './casillas.js';
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 const n = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -49,6 +50,18 @@ export async function responderDemo(texto, alEvento) {
   const ctx = contexto();
   await espera(350);
 
+  const rec = texto.match(/\b(?:recuerda|acuérdate|acuerdate|ten en cuenta)\s+(?:que\s+)?(.{3,})/i);
+  if (rec) {
+    alEvento({ t: 'herramienta', nombre: 'proponer_recuerdo' });
+    await espera(350);
+    const frase = rec[1].replace(/[.!?¡¿]+$/, '');
+    const r = ejecutar('proponer_recuerdo', { texto: frase });
+    if (r.error) { alEvento({ t: 'texto', md: `No lo guardo: ${r.error}` }); return; }
+    alEvento({ t: 'texto', md: '¿Quieres que lo recuerde para tus próximas preguntas? Tú decides:' });
+    alEvento({ t: 'recuerdo', texto: frase[0].toUpperCase() + frase.slice(1) });
+    return;
+  }
+
   if (/registr|anota|pague|compre|gaste \d|me pagaron|cobre|me depositaron/.test(t)) {
     const p = propuesta(t, texto, ctx);
     if (p) {
@@ -60,6 +73,50 @@ export async function responderDemo(texto, alEvento) {
       alEvento({ t: 'propuesta', datos: p });
       return;
     }
+  }
+
+  // Asistencia en la declaración: una casilla concreta o el recorrido completo
+  const q = texto.match(/«(.+?)»/);
+  const anioTxt = t.match(/\b(20\d\d)\b/)?.[1];
+  const mesTxt = MESES.findIndex((x) => new RegExp(`\\b${x}\\b`).test(t));
+  const periodo = /\banual\b/.test(t) && anioTxt ? anioTxt : anioTxt && mesTxt >= 0 ? `${anioTxt}-${String(mesTxt + 1).padStart(2, '0')}` : ctx.hoy.slice(0, 7);
+  if (q && ID_POR_ETIQUETA[q[1]]) {
+    alEvento({ t: 'herramienta', nombre: 'guia_casilla' });
+    await espera(450);
+    const g = ejecutar('guia_casilla', { casilla: ID_POR_ETIQUETA[q[1]], periodo });
+    if (g.error) { alEvento({ t: 'texto', md: g.error }); return; }
+    const v = typeof g.valor === 'number';
+    alEvento({ t: 'texto', md: `En **${g.casilla}** (pestaña ${g.pestana}) pon **${v ? pesos(g.valor) : g.valor}**${v && g.valor % 1 ? ` (son ${money(g.valor)}; el portal pide pesos sin centavos)` : ''}.
+
+${g.explicacion}
+
+Fundamento: ${g.fuente.documento}, ${g.fuente.articulo}.${g.reglas_provisionales ? ' Ojo: las reglas de este año aún son provisionales.' : ''}
+
+Es una estimación; confírmala con el SAT o con un contador.` });
+    return;
+  }
+  if (/guiame|paso a paso/.test(t) && ctx.regimenes.includes('resico')) {
+    const imp = /\biva\b/.test(t) ? 'iva' : 'isr';
+    alEvento({ t: 'herramienta', nombre: 'declaracion_mensual' });
+    await espera(400);
+    const d = ejecutar('declaracion_mensual', { mes: periodo.length === 7 ? periodo : ctx.hoy.slice(0, 7) });
+    if (d.error) { alEvento({ t: 'texto', md: d.error }); return; }
+    alEvento({ t: 'herramienta', nombre: 'guia_casilla' });
+    await espera(350);
+    const filas = Object.entries(CASILLAS).filter(([, c]) => c[0] === imp).map(([id]) => ejecutar('guia_casilla', { casilla: id, periodo: d.mes })).filter((g) => !g.error);
+    alEvento({ t: 'texto', md: `Vamos con el **${imp.toUpperCase()}** de ${d.mes}. Captura así, en este orden:
+
+| Casilla | Pon |
+| --- | --- |
+${filas.map((g) => `| ${g.casilla} | ${typeof g.valor === 'number' ? pesos(g.valor) : g.valor} |`).join('\n')}
+| **Cantidad a pagar** | **${pesos(imp === 'isr' ? d.isr.isr_a_cargo : d.iva.iva_a_cargo)}** |
+
+1. Revisa que el prellenado coincida con la primera casilla. Si no, dime qué ves y lo revisamos.
+2. ${imp === 'isr' ? 'La tasa y el ISR determinado los calcula el portal: solo confirma que coincidan.' : 'El IVA acreditable lo capturas tú: es el IVA de tus gastos de la actividad con factura.'}
+3. Al terminar, ${imp === 'isr' ? 'sigue con el IVA (pregúntame «guíame con el IVA»)' : 'envía la declaración y paga la línea de captura'} antes del ${fechaLarga(d.fecha_limite)}.
+
+Es una estimación; confírmala con el SAT o con un contador.` });
+    return;
   }
 
   if (/declar|impuesto|\bsat\b|\bisr\b|\biva\b|cuanto pago|cuanto debo/.test(t)) {

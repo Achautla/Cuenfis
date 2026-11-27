@@ -46,6 +46,7 @@ function alEvento(e) {
   if (e.t === 'herramienta') agregar({ rol: 'herramienta', nombre: e.nombre });
   else if (e.t === 'texto' && e.md.trim()) agregar({ rol: 'asistente', md: e.md });
   else if (e.t === 'propuesta') agregar({ rol: 'propuesta', datos: e.datos, estado: 'pendiente', ...(fotoActual || fotoPendiente ? { id: fotoActual || fotoPendiente } : {}) }), (fotoPendiente = null);
+  else if (e.t === 'recuerdo') agregar({ rol: 'recuerdo', texto: e.texto, estado: 'pendiente' });
   else if (e.t === 'uso') st = { ...st, uso: e.uso };
 }
 
@@ -89,6 +90,7 @@ async function preguntarReal(texto, contenido = texto) {
       alEvento({ t: 'herramienta', nombre: b.name });
       const salida = ejecutar(b.name, b.input);
       if (b.name === 'proponer_movimiento' && !salida.error) alEvento({ t: 'propuesta', datos: b.input });
+      if (b.name === 'proponer_recuerdo' && !salida.error) alEvento({ t: 'recuerdo', texto: b.input.texto });
       resultados.push({ type: 'tool_result', tool_use_id: b.id, content: JSON.stringify(salida), ...(salida.error ? { is_error: true } : {}) });
     }
     api = [...api, { role: 'user', content: resultados }];

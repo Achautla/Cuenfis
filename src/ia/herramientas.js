@@ -5,6 +5,8 @@ import { CATEGORIAS, categoria, REGIMENES } from '../data/catalogo.js';
 import { categoriasDisponibles, regimenesEn, regimenesEnRango } from '../core/regimen.js';
 import { reglas, valor, fuente } from '../core/reglas.js';
 import { estadoPresupuestos } from '../core/presupuestos.js';
+import { guiaCasilla } from './casillas.js';
+import { limpiarRecuerdo, paraContexto } from './memoria.js';
 import { CLAVES_REGLAS, NOMBRES_HERRAMIENTAS } from '../../supabase/functions/_shared/herramientas.js';
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
@@ -108,7 +110,14 @@ function proponer_movimiento(e) {
   return { estado: 'mostrado_al_usuario', nota: 'El usuario lo revisará y lo guardará o lo descartará en la app. No digas que ya se guardó.' };
 }
 
-const IMPL = { estado_financiero, resumen_periodo, buscar_movimientos, listar_categorias, declaracion_mensual, declaracion_anual, regla_fiscal, proponer_movimiento };
+const guia_casilla = ({ casilla, periodo }) => guiaCasilla(casilla, periodo);
+
+function proponer_recuerdo({ texto }) {
+  try { limpiarRecuerdo(texto); } catch (e) { return { error: e.message }; }
+  return { estado: 'mostrado_al_usuario', nota: 'El usuario decide si se guarda. No digas que ya lo recordaste.' };
+}
+
+const IMPL = { proponer_recuerdo, guia_casilla, estado_financiero, resumen_periodo, buscar_movimientos, listar_categorias, declaracion_mensual, declaracion_anual, regla_fiscal, proponer_movimiento };
 
 /** Ejecuta una herramienta pedida por el asistente. Nunca lanza: los errores vuelven como datos. */
 export function ejecutar(nombre, entrada) {
@@ -119,7 +128,7 @@ export function ejecutar(nombre, entrada) {
 /** Contexto mínimo que acompaña cada pregunta. */
 export function contexto() {
   const foto = getFoto();
-  return { hoy: foto.hoy, regimenes: regimenesEn(foto.perfil, foto.hoy), frontera: !!foto.perfil?.frontera };
+  return { hoy: foto.hoy, regimenes: regimenesEn(foto.perfil, foto.hoy), frontera: !!foto.perfil?.frontera, ...paraContexto() };
 }
 
 export const ETIQUETAS = {
@@ -129,7 +138,9 @@ export const ETIQUETAS = {
   estado_financiero: 'Revisando saldos, presupuestos y metas',
   declaracion_mensual: 'Calculando tu declaración mensual',
   declaracion_anual: 'Calculando tu declaración anual',
+  guia_casilla: 'Revisando la casilla del portal del SAT',
   regla_fiscal: 'Consultando la regla fiscal y su fuente',
   proponer_movimiento: 'Preparando el movimiento',
+  proponer_recuerdo: 'Preparando algo para recordar',
   leer_qr_cfdi: 'Leyendo el QR de la factura en tu dispositivo',
 };
