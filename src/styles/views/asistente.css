@@ -109,3 +109,20 @@
 .ia-prop-foto svg { width: 13px; height: 13px; }
 .mov-foto { margin: 12px 0 0; }
 .mov-foto img { display: block; max-width: 100%; max-height: 360px; border-radius: var(--r-md); border: 1px solid var(--line); }
+
+/* Memoria y estilo */
+.ia-rec p { margin: 0; color: var(--ink); }
+.ia-prefs { width: min(520px, calc(100vw - 24px)); }
+.ia-pf { border: 0; margin: 0 0 18px; padding: 0; }
+.ia-pf legend { font-weight: 600; font-size: 14px; margin-bottom: 8px; color: var(--ink); }
+.ia-temas { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-check { position: relative; display: inline-flex; }
+.chip-check input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.chip-check span { padding: 7px 12px; border-radius: 99px; font-size: 13px; border: 1px solid var(--line-2, var(--line)); color: var(--ink-2); background: var(--surface); transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast); }
+.chip-check input:checked + span { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.chip-check input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ia-mem { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 6px; }
+.ia-mem li { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 12px; border-radius: var(--r-md); background: var(--surface-2, var(--bg)); font-size: 14px; }
+.ia-mem li span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ia-mem-add { display: flex; gap: 8px; margin-bottom: 8px; }
+.ia-mem-add input { flex: 1; min-width: 0; }

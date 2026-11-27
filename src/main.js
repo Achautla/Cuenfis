@@ -39,6 +39,9 @@ import { entrada } from './ui/animaciones.js';
 import * as reglasRemotas from './data/reglas-remotas.js';
 import * as legal from './views/legal.js';
 import * as asistente from './views/asistente.js';
+import * as noticiasVista from './views/noticias.js';
+import * as noticias from './data/noticias.js';
+import { avisarNoticias } from './ui/notificaciones.js';
 import { preguntarSiHaceFalta, sincronizarConsentimiento } from './ia/consentimiento.js';
 import { reintentarReal } from './ia/conversacion.js';
 import { abrirFormulario } from './views/movimiento-form.js';
@@ -53,6 +56,7 @@ import { nativo } from './native.js';
 const RUTAS = {
   inicio: { v: inicio, t: 'Inicio', i: 'home', p: 1, g: 'dinero' },
   asistente: { v: asistente, t: 'Asistente', i: 'sparkle', g: 'dinero' },
+  noticias: { v: noticiasVista, t: 'Noticias', i: 'news', g: 'dinero' },
   avisos: { v: avisos, t: 'Avisos', i: 'bell', g: 'dinero' },
   movimientos: { v: movimientos, t: 'Movimientos', i: 'list', p: 1, g: 'dinero' },
   balance: { v: balance, t: 'Balance', i: 'scale', p: 1, g: 'dinero' },
@@ -89,7 +93,8 @@ function pintarNav(actual) {
   let g = null;
   $('#nav').innerHTML = visibles().map(([k, r]) => {
     const cab = r.g !== g ? `<span class="nav-g">${esc(GRUPOS[(g = r.g)])}</span>` : '';
-    const badge = k === 'avisos' && nAvisos ? `<span class="badge" aria-label="${nAvisos} pendientes">${nAvisos}</span>` : '';
+    const nNot = k === 'noticias' ? noticias.sinLeer().length : 0;
+    const badge = k === 'avisos' && nAvisos ? `<span class="badge" aria-label="${nAvisos} pendientes">${nAvisos}</span>` : nNot ? `<span class="badge info" aria-label="${nNot} sin leer">${nNot}</span>` : '';
     return `${cab}<a href="#/${k}" class="${r.p ? 'pri' : 'sec'}" ${k === actual ? 'aria-current="page"' : ''}>${icon(r.i)}<span class="lbl-long">${esc(r.t)}</span><span class="lbl-short">${esc(r.c ?? r.t)}</span>${badge}</a>`;
   }).join('') +
     `<button type="button" class="mas" id="btnMas" ${enMas ? 'aria-current="page"' : ''} aria-haspopup="dialog">${icon('more')}<span class="lbl-short">Más</span>${nAvisos ? `<span class="badge">${nAvisos}</span>` : ''}</button>`;
@@ -154,6 +159,8 @@ window.addEventListener('unhandledrejection', (ev) => falla(ev.reason));
 window.addEventListener('hashchange', () => { render(); $('#main').focus({ preventScroll: true }); window.scrollTo(0, 0); entrada($('#main')); });
 suscribir(render);
 alRecalcular(render);
+noticias.actualizar().then(() => { if (getEstado().perfil) { pintarNav(ruta()); avisarNoticias(noticias.paraMi()).catch(() => {}); } });
+window.addEventListener('cuenfis:noticias', () => getEstado().perfil && pintarNav(ruta()));
 reglasRemotas.actualizar(); // trae correcciones o reglas de un año nuevo sin publicar otra versión de la app
 $('#fab').onclick = () => abrirFormulario({ tipo: 'entrada' });
 

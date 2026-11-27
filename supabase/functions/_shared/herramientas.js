@@ -64,6 +64,11 @@ export const HERRAMIENTAS = [
     input_schema: { type: 'object', properties: { clave: { type: 'string', enum: CLAVES_REGLAS }, anio: { type: 'integer' } }, required: ['clave', 'anio'], additionalProperties: false },
   },
   {
+    name: 'proponer_recuerdo',
+    description: 'Propone guardar en la memoria del usuario un dato útil y duradero sobre sus preferencias o metas (por ejemplo, "quiere juntar para el enganche de un auto en 2027"). El usuario decide si se guarda. Nunca propongas datos sensibles (RFC, CURP, cuentas, tarjetas, contraseñas, salud).',
+    input_schema: { type: 'object', properties: { texto: { type: 'string', description: 'Máximo 200 caracteres, en tercera persona' } }, required: ['texto'], additionalProperties: false },
+  },
+  {
     name: 'proponer_movimiento',
     description: 'Muestra al usuario un movimiento listo para que lo confirme o lo descarte. Nunca se guarda sin su confirmación. Usa una categoría de listar_categorias.',
     input_schema: {

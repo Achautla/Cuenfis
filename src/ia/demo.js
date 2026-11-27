@@ -50,6 +50,18 @@ export async function responderDemo(texto, alEvento) {
   const ctx = contexto();
   await espera(350);
 
+  const rec = texto.match(/\b(?:recuerda|acuérdate|acuerdate|ten en cuenta)\s+(?:que\s+)?(.{3,})/i);
+  if (rec) {
+    alEvento({ t: 'herramienta', nombre: 'proponer_recuerdo' });
+    await espera(350);
+    const frase = rec[1].replace(/[.!?¡¿]+$/, '');
+    const r = ejecutar('proponer_recuerdo', { texto: frase });
+    if (r.error) { alEvento({ t: 'texto', md: `No lo guardo: ${r.error}` }); return; }
+    alEvento({ t: 'texto', md: '¿Quieres que lo recuerde para tus próximas preguntas? Tú decides:' });
+    alEvento({ t: 'recuerdo', texto: frase[0].toUpperCase() + frase.slice(1) });
+    return;
+  }
+
   if (/registr|anota|pague|compre|gaste \d|me pagaron|cobre|me depositaron/.test(t)) {
     const p = propuesta(t, texto, ctx);
     if (p) {

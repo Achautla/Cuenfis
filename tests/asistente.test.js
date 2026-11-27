@@ -63,7 +63,7 @@ describe('Herramientas del asistente', () => {
     expect(store.getEstado().movimientos.length).toBe(antes);
   });
   it('el contexto solo lleva fecha, regímenes y frontera', () => {
-    expect(Object.keys(ia.contexto()).sort()).toEqual(['frontera', 'hoy', 'regimenes']);
+    expect(Object.keys(ia.contexto()).sort()).toEqual(['estilo', 'frontera', 'hoy', 'memoria', 'regimenes']);
   });
 });
 
@@ -138,5 +138,31 @@ describe('Fase 10: asistencia en la declaración', () => {
     const ev = await correr('Guíame paso a paso con el ISR de este mes');
     expect(ev.at(-1).md).toMatch(/Cantidad a pagar/);
     expect(ev.at(-1).md).toMatch(/Tasa aplicable/);
+  });
+});
+
+describe('Fase 11: memoria y noticias', () => {
+  it('la memoria rechaza datos sensibles y no duplica', async () => {
+    const mem = await import('../src/ia/memoria.js');
+    expect(() => mem.limpiarRecuerdo('Mi RFC es GODE561231GR8')).toThrow(/RFC/);
+    expect(() => mem.limpiarRecuerdo('tarjeta 4111111111111111')).toThrow();
+    mem.recordar('Está ahorrando para un auto en 2027');
+    mem.recordar('está ahorrando para un auto en 2027');
+    expect(mem.recuerdos()).toHaveLength(1);
+    expect(ia.contexto().memoria).toEqual(['Está ahorrando para un auto en 2027']);
+    mem.olvidarTodo();
+    expect(mem.recuerdos()).toHaveLength(0);
+  });
+  it('demostración: "recuerda que" propone un recuerdo sin guardarlo', async () => {
+    const mem = await import('../src/ia/memoria.js');
+    const ev = await correr('Recuerda que prefiero respuestas cortas');
+    expect(ev.find((e) => e.t === 'recuerdo').texto).toBe('Prefiero respuestas cortas');
+    expect(mem.recuerdos()).toHaveLength(0);
+  });
+  it('noticias: se filtran por régimen y tema', async () => {
+    const n = await import('../src/data/noticias.js');
+    const lista = n.paraMi();
+    expect(Array.isArray(lista)).toBe(true);
+    for (const x of lista) expect(x.titulo).toBeTruthy();
   });
 });
