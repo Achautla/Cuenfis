@@ -1,0 +1,16 @@
+.reglas .rg-lista { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); align-items: start; }
+.rg-item { display: grid; gap: 8px; }
+.rg-item.ajeno { border-style: dashed; }
+.rg-top { display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+.rg-top h2 { flex: 1; font-size: 15px; margin: 0; color: var(--navy); min-width: 60%; }
+.rg-valor { font-size: 15px; color: var(--ink); display: grid; gap: 4px; }
+.rg-valor > .num { font-size: 20px; font-weight: 600; }
+.rg-valor small { color: var(--ink-3); font-size: 12px; }
+.rg-valor table { font-size: 13px; }
+.rg-src { margin: 0; font-size: 12px; color: var(--ink-3); }
+.rg-tabla summary { cursor: pointer; color: var(--accent); font-weight: 500; font-size: 14px; min-height: 32px; display: flex; align-items: center; }
+.rg-origen { display: flex; gap: 6px; align-items: center; margin-top: 16px; }
+.rg-origen svg { width: 14px; height: 14px; flex: none; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .rg-top h2 { color: var(--ink); } }
+:root[data-theme="dark"] .rg-top h2 { color: var(--ink); }
+.rg-item .fuente-chip { justify-self: start; margin-top: 0; }

@@ -7,6 +7,7 @@ import { nuevoId } from '../data/acciones.js';
 import { datosDemo } from '../data/demo.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, money, fechaLarga, toast, descargar, hoyISO } from '../ui/dom.js';
+import { leyenda } from '../ui/fuente.js';
 import '../styles/views/ajustes.css';
 
 
@@ -73,7 +74,7 @@ export function render(main) {
         </div>
       </div>
     </div>
-    <p class="disclaimer">Cuenfis ${version} · Cálculos estimados con reglas fiscales 2026, no son asesoría fiscal. <a href="#/legal">Información legal</a></p>
+    <p class="disclaimer">Cuenfis ${version} · Cálculos estimados con ${esc(leyenda(+getFoto().hoy.slice(0, 4)))}, no son asesoría fiscal. <a href="#/legal">Información legal</a></p>
   </section>`;
 
   const editarPerfil = (fn) => aplicar((s) => ({ ...s, perfil: fn(s.perfil) }));

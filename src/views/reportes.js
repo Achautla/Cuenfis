@@ -4,6 +4,7 @@ import { reporteContador } from '../core/reporte.js';
 import { rangoMes, ym } from '../core/motor.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, money, pct, nombreMes, fechaCorta, toast, descargar } from '../ui/dom.js';
+import { leyenda } from '../ui/fuente.js';
 import '../styles/views/reportes.css';
 
 let tipo = 'mes', clave = null;
@@ -106,7 +107,7 @@ export function render(main) {
         <p class="small muted">No forman parte de los ingresos del periodo hasta que se cobran.</p>` : ''}
 
       ${!r.secciones.ingresos && !r.secciones.deducciones && !r.gastosActividad.length ? `<div class="empty">${icon('file')}<p>No hay movimientos fiscales en este periodo.</p></div>` : ''}
-      <p class="disclaimer">Generado por Cuenfis. Cálculos estimados con reglas fiscales 2026; revisar contra CFDI, constancias y el portal del SAT. No sustituye la asesoría de un contador.</p>
+      <p class="disclaimer">Generado por Cuenfis. Cálculos estimados con ${esc(leyenda(+getFoto().hoy.slice(0, 4)))}; revisar contra CFDI, constancias y el portal del SAT. No sustituye la asesoría de un contador.</p>
     </article>
   </section>`;
 

@@ -10,6 +10,7 @@ import { categoria } from '../data/catalogo.js';
 import { abrirFormulario } from './movimiento-form.js';
 import { estadoTarjeta } from '../core/deudas.js';
 import { pendientesRecurrentes, progresoMeta, resumenClientes } from '../core/agenda.js';
+import { leyenda } from '../ui/fuente.js';
 import '../styles/views/inicio.css';
 
 function proximasFechas(foto) {
@@ -129,7 +130,7 @@ export function render(main) {
       <div class="card-head"><h2>Últimos movimientos</h2><span class="spacer"></span><a class="link" href="#/movimientos">Ver todos</a></div>
       ${listaAgrupada(ultimos, foto, 'Aún no hay movimientos. Registra tu primera entrada o salida.')}
     </div>
-    <p class="disclaimer">Cálculos estimados con reglas fiscales 2026. Confírmalos con el SAT o con un contador antes de declarar.</p>
+    <p class="disclaimer">Cálculos estimados con ${esc(leyenda(+getFoto().hoy.slice(0, 4)))}. Confírmalos con el SAT o con un contador antes de declarar.</p>
   </section>`;
 
   const el = $('#heroDisp', main);

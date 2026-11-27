@@ -41,5 +41,11 @@ export function aplicar(fn) {
 
 export const suscribir = (fn) => (subs.add(fn), () => subs.delete(fn));
 
+// Pantallas que se vuelven a pintar cuando cambia algo que no son tus datos (p. ej. llegan reglas fiscales nuevas).
+const vistas = new Set();
+export const alRecalcular = (fn) => (vistas.add(fn), () => vistas.delete(fn));
+/** Recalcula la foto sin tocar ni subir tus datos. */
+export function recalcular() { foto = null; vistas.forEach((v) => v()); }
+
 export function reemplazar(nuevo) { aplicar(() => ({ ...estadoVacio(), ...nuevo })); }
 export function reiniciar() { aplicar(() => estadoVacio()); }

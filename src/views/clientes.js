@@ -7,6 +7,7 @@ import { guardarFactura, cobrarFactura, cancelarFactura, nuevoId } from '../data
 import { icon } from '../ui/icons.js';
 import { $, esc, money, fechaLarga, fechaCorta, toast } from '../ui/dom.js';
 import { confirmar } from '../ui/confirmar.js';
+import { leyenda } from '../ui/fuente.js';
 import '../styles/views/clientes.css';
 
 let filtro = 'pendiente';
@@ -110,7 +111,7 @@ export function render(main) {
       <p class="small muted" id="facPrev" aria-live="polite"></p>
       <button class="btn primary">${icon('plus')}Registrar factura</button>
     </form>
-    <p class="disclaimer">Cálculos estimados con reglas fiscales 2026. Esta pantalla no emite CFDI: regístralos aquí después de emitirlos en el portal del SAT o con tu proveedor.</p>
+    <p class="disclaimer">Cálculos estimados con ${esc(leyenda(+getFoto().hoy.slice(0, 4)))}. Esta pantalla no emite CFDI: regístralos aquí después de emitirlos en el portal del SAT o con tu proveedor.</p>
   </section>`;
 
   main.querySelectorAll('[data-fil]').forEach((b) => (b.onclick = () => { filtro = b.dataset.fil; render(main); }));

@@ -3,6 +3,7 @@ import { REGIMENES } from '../data/catalogo.js';
 import { datosDemo } from '../data/demo.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, hoyISO } from '../ui/dom.js';
+import { leyenda } from '../ui/fuente.js';
 import '../styles/views/bienvenida.css';
 
 export function render(main) {
@@ -32,7 +33,7 @@ export function render(main) {
         <button type="button" class="btn ghost" id="demo">${icon('sparkle')}Explorar con datos de ejemplo</button>
         <a class="btn ghost" href="#/cuenta">${icon('cloud')}Ya tengo cuenta: iniciar sesión</a>
       </form>
-      <p class="disclaimer">Cuenfis da estimaciones con las reglas fiscales 2026. No sustituye la asesoría de un contador. Sin cuenta, tus datos se quedan solo en este dispositivo.<br /><a href="#/privacidad">Aviso de privacidad</a> · <a href="#/terminos">Términos y condiciones</a> · <a href="#/legal">Información legal</a></p>
+      <p class="disclaimer">Cuenfis da estimaciones con las ${esc(leyenda(new Date().getFullYear()))}. No sustituye la asesoría de un contador. Sin cuenta, tus datos se quedan solo en este dispositivo.<br /><a href="#/privacidad">Aviso de privacidad</a> · <a href="#/terminos">Términos y condiciones</a> · <a href="#/legal">Información legal</a></p>
     </div></section>`;
   $('#fBienv', main).onsubmit = (ev) => {
     ev.preventDefault();

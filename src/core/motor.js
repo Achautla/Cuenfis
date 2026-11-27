@@ -189,8 +189,6 @@ export function colchon(foto) {
   return foto.balance.disponible / prom;
 }
 
-const TOPE_COLEGIATURA = 24_500; // nivel bachillerato (decreto de estímulo); tope por alumno y nivel
-
 /** Declaración anual: ISR de sueldos (art. 152) con deducciones personales; RESICO informativo. */
 export function anual(foto, y) {
   const p = params(y);
@@ -211,13 +209,14 @@ export function anual(foto, y) {
   const colegiaturas = grupo(['colegiaturas']);
   const ingresos = ingresosSueldos; // ingresos que se acumulan en la anual que calculamos
   const limGeneral = r2(Math.min(umaAnual(p) * p.deducciones.umasAnuales, ingresos * p.deducciones.porcentajeIngresos));
-  const limAfore = r2(Math.min(ingresos * 0.10, umaAnual(p) * 5));
-  const limDonativos = r2(ingresos * 0.07);
+  const limAfore = r2(Math.min(ingresos * p.deducciones.afore.porcentajeIngresos, umaAnual(p) * p.deducciones.afore.umasAnuales));
+  const limDonativos = r2(ingresos * p.deducciones.donativos.porcentajeIngresos);
+  const topeColegiatura = p.deducciones.colegiaturas.bachillerato; // tope por alumno y nivel; se usa el de bachillerato
   const aplicables = {
     general: Math.min(general, limGeneral),
     afore: Math.min(afore, limAfore),
     donativos: Math.min(donativos, limDonativos),
-    colegiaturas: Math.min(colegiaturas, TOPE_COLEGIATURA),
+    colegiaturas: Math.min(colegiaturas, topeColegiatura),
   };
   const totalDeducible = r2(Object.values(aplicables).reduce((s, x) => s + x, 0));
   const base = r2(Math.max(0, ingresos - totalDeducible));
@@ -237,7 +236,7 @@ export function anual(foto, y) {
     anio: y, regs, tieneSueldos, tieneResico,
     sueldos: { ingresos: ingresosSueldos, isrRetenido, estimado, recibos: sueldos.length },
     deducciones: { lista: ded, deducibles: ok, general, afore, donativos, colegiaturas,
-      limGeneral, limAfore, limDonativos, topeColegiatura: TOPE_COLEGIATURA, aplicables, total: totalDeducible },
+      limGeneral, limAfore, limDonativos, topeColegiatura, aplicables, total: totalDeducible },
     base, isrAnual, isrSinDed, ahorroPorDeducciones: r2(isrSinDed - isrAnual), diferencia,
     aCargo: Math.max(0, diferencia), aFavor: Math.max(0, -diferencia), obligado,
     resico: { ingresos: suma(mesesRes, (x) => x.total), isrPagos: suma(mesesRes, (x) => x.isrDet), meses: mesesRes.length,
