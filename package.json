@@ -32,6 +32,7 @@
     "@capacitor/filesystem": "^7.1.9",
     "@capacitor/local-notifications": "^7.0.7",
     "@capacitor/share": "^7.0.4",
+    "@capacitor/status-bar": "^7.0.6",
     "@fontsource/inter": "^5.1.0",
     "@fontsource/inter-tight": "^5.1.0",
     "@supabase/supabase-js": "^2.119.2",
