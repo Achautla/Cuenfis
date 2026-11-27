@@ -12,8 +12,9 @@ export function arrancar() {
   if (!nube.disponible) return;
   suscribir(() => {
     if (aplicandoRemoto || !nube.getUsuario() || !getEstado().perfil) return;
+    cambiosDurante++;
     nube.marcarPendiente();
-    nube.fijarSync({ fase: 'pendiente' });
+    if (!enCurso) nube.fijarSync({ fase: 'pendiente' });
     clearTimeout(timer);
     timer = setTimeout(subirAhora, 1500);
   });
@@ -31,6 +32,7 @@ async function revisarRemoto() {
   try {
     const r = await nube.bajar();
     if (r && r.version !== nube.versionLocal()) usarRemoto(r);
+    else if (!r && getEstado().perfil) { nube.olvidarVersion(); await subirAhora(); } // la copia en la nube se borró desde otro dispositivo
     else nube.fijarSync({ fase: 'al-dia', en: new Date().toISOString() });
   } catch (e) { nube.fijarSync({ fase: 'sin-conexion', error: e.message }); }
 }
@@ -43,18 +45,35 @@ function usarRemoto(r) {
   nube.fijarSync({ fase: 'al-dia', version: r.version, en: new Date().toISOString(), error: null });
 }
 
-export async function subirAhora() {
+// Una sola subida a la vez: si llegan cambios mientras sube, se hace otra al terminar.
+// (Dos subidas simultáneas usarían la misma versión base y la segunda parecería un conflicto.)
+let enCurso = null, otraVez = false, cambiosDurante = 0;
+
+export function subirAhora() {
   clearTimeout(timer);
-  if (!nube.getUsuario()) return;
-  nube.fijarSync({ fase: 'sincronizando' });
-  try {
-    await migrarAcuses();
-    const res = await nube.subir(getEstado());
-    if (res.conflicto) { remotoEnConflicto = res.conflicto; nube.fijarSync({ fase: 'conflicto' }); return; }
-    nube.fijarSync({ fase: 'al-dia', version: res.version, en: new Date().toISOString(), error: null });
-  } catch (e) {
-    nube.fijarSync({ fase: navigator.onLine ? 'error' : 'sin-conexion', error: e.message });
-  }
+  if (!nube.getUsuario()) return Promise.resolve();
+  if (enCurso) { otraVez = true; return enCurso; }
+  enCurso = (async () => {
+    do {
+      otraVez = false;
+      const marca = cambiosDurante;
+      nube.fijarSync({ fase: 'sincronizando' });
+      try {
+        await migrarAcuses();
+        const res = await nube.subir(getEstado());
+        if (res.conflicto !== undefined) {
+          if (!res.conflicto) { nube.olvidarVersion(); otraVez = true; continue; } // la nube se borró: se vuelve a crear
+          remotoEnConflicto = res.conflicto; nube.fijarSync({ fase: 'conflicto' }); break;
+        }
+        if (cambiosDurante !== marca) { nube.marcarPendiente(); otraVez = true; }
+        nube.fijarSync({ fase: otraVez ? 'pendiente' : 'al-dia', version: res.version, en: new Date().toISOString(), error: null });
+      } catch (e) {
+        nube.fijarSync({ fase: navigator.onLine ? 'error' : 'sin-conexion', error: e.message });
+        break;
+      }
+    } while (otraVez);
+  })().finally(() => { enCurso = null; });
+  return enCurso;
 }
 
 /**
@@ -79,7 +98,7 @@ export async function resolver(opcion, remoto = remotoEnConflicto) {
 
 export async function restaurarVersion(id) {
   const v = await nube.leerVersion(id);
-  aplicar(() => ({ ...v.datos })); // se sube como una versión nueva; la actual queda en el historial
+  reemplazar(v.datos); // se sube como una versión nueva; la actual queda en el historial
 }
 
 /** Los acuses guardados sin sesión viven como archivo en el dispositivo: al tener sesión se suben al bucket privado. */

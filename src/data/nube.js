@@ -109,6 +109,7 @@ export async function subir(estado) {
 /** Adopta el documento de la nube como la versión de este dispositivo. */
 export function adoptar(remoto) { guardarMeta({ version: remoto.version, pendiente: false, user: usuario.id }); }
 export function marcarPendiente() { const m = leerMeta(); guardarMeta({ ...m, pendiente: true }); }
+export function olvidarVersion() { guardarMeta({ pendiente: true }); }
 export const versionLocal = () => leerMeta().version ?? null;
 
 export async function versionesAnteriores() {

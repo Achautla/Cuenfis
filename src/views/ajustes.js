@@ -145,8 +145,11 @@ export function render(main) {
     reemplazar(data); toast('Respaldo restaurado', icon('check-circle'));
   };
   $('#demo', main).onclick = async () => {
-    if (e.movimientos.length && !(await confirmar({ titulo: '¿Cargar datos de ejemplo?', accion: 'Reemplazar con ejemplo',
-      efectos: [`Tus ${e.movimientos.length} movimiento(s), cuentas y regímenes se reemplazan por datos ficticios.`, 'Descarga antes un respaldo si quieres conservarlos.'] }))) return;
+    const conSesion = !!nube.getUsuario();
+    if ((e.movimientos.length || conSesion) && !(await confirmar({ titulo: '¿Cargar datos de ejemplo?', accion: 'Reemplazar con ejemplo',
+      efectos: [`Tus ${e.movimientos.length} movimiento(s), cuentas y regímenes se reemplazan por datos ficticios.`,
+        ...(conSesion ? ['Tienes sesión iniciada: los datos ficticios también reemplazarán tu copia en la nube (la anterior queda en Versiones anteriores).'] : []),
+        'Descarga antes un respaldo si quieres conservarlos.'] }))) return;
     reemplazar(datosDemo(hoyISO())); location.hash = '#/inicio'; toast('Datos de ejemplo cargados', icon('sparkle'));
   };
   $('#borrar', main).onclick = async () => {

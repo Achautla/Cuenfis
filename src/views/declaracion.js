@@ -27,7 +27,8 @@ function estadoMes(m) {
     <div class="row">
       ${m.estado !== 'pagada' ? `<label class="field inline"><span>Pagar desde</span><select id="ctaPago">${cuentas.map((c) => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('')}</select></label>` : ''}
       ${m.estado === 'pendiente' ? `<button class="btn" data-est="presentada">${icon('file')}Marcar presentada</button>` : ''}
-      ${m.estado !== 'pagada' ? `<button class="btn primary" data-est="pagada">${icon('check')}${m.totalPagar ? 'Marcar pagada' : 'Marcar presentada en ceros'}</button>` : `<button class="btn ghost" data-est="pendiente">Deshacer</button>`}
+      ${m.estado !== 'pagada' ? (m.estado === 'presentada' && !m.totalPagar ? '' : `<button class="btn primary" data-est="pagada">${icon('check')}${m.totalPagar ? 'Marcar pagada' : 'Marcar presentada en ceros'}</button>`) : ''}
+      ${m.estado !== 'pendiente' ? `<button class="btn ghost" data-est="pendiente">Deshacer</button>` : ''}
     </div>${m.estado !== 'pendiente' ? acuseHTML(m.clave) : ''}</div>`;
 }
 

@@ -28,7 +28,7 @@ function abrirCobro(f, main) {
   d.innerHTML = `<form id="fCobro"><div class="dlg-head"><h2>Registrar cobro</h2><button type="button" class="btn ghost icon" data-x aria-label="Cerrar">${icon('x')}</button></div>
     <div class="dlg-body">
       <p class="muted" style="margin-bottom:12px">${esc(f.cliente)}${f.folio ? ` · folio ${esc(f.folio)}` : ''} · subtotal ${money(f.subtotal)}</p>
-      <div class="cols-2"><label class="field"><span>Fecha en que te pagaron</span><input name="fecha" type="date" required value="${foto.hoy}" max="${foto.hoy}" /></label>
+      <div class="cols-2"><label class="field"><span>Fecha en que te pagaron</span><input name="fecha" type="date" required value="${foto.hoy}" min="${esc(f.fecha)}" max="${foto.hoy}" /></label>
       <label class="field"><span>Cuenta</span><select name="cuenta">${cuentas.map((c) => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('')}</select></label></div>
       <label class="field"><span>Monto que llegó</span><input name="monto" type="number" step="0.01" min="0.01" required value="${esperado}" /><span class="hint">Esperado: ${money(esperado)}${f.pagador === 'pm' ? ', ya sin las retenciones de la empresa' : ''}.</span></label>
       <div id="cobroCat" class="small muted"></div>
@@ -46,6 +46,8 @@ function abrirCobro(f, main) {
     ev.preventDefault();
     const fd = new FormData(form);
     const cat = categoriaDeCobro(foto.perfil, fd.get('fecha'), CATEGORIAS);
+    if (fd.get('fecha') < f.fecha) { toast('La fecha de cobro no puede ser antes de la emisión de la factura', icon('alert')); return; }
+    if (!(Number(fd.get('monto')) > 0)) { toast('Escribe un monto mayor a cero', icon('alert')); return; }
     if (!cat) { toast('En esa fecha no tienes un régimen con actividad', icon('alert')); return; }
     aplicar((s) => cobrarFactura(s, f.id, { fecha: fd.get('fecha'), cuenta: fd.get('cuenta'), monto: Number(fd.get('monto')), categoria: cat.id }));
     d.onclick = null; d.close();
