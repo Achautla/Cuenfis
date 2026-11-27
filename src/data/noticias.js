@@ -9,6 +9,8 @@ import { temas } from '../ia/memoria.js';
 
 const COPIA = 'cuenfis:noticias';
 const LEIDAS = 'cuenfis:noticias:leidas';
+const OCULTAS = 'cuenfis:noticias:ocultas';
+const AUTO = 'cuenfis:noticias:automaticas';
 const leer = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
 const guardar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin espacio */ } };
 
@@ -18,7 +20,7 @@ let remotas = leer(COPIA, { filas: [], en: null }).filas;
 export async function actualizar() {
   if (!nube.disponible) return false;
   try {
-    const { data, error } = await nube.sb.from('noticias').select('id, titulo, resumen, enlace, fuente, temas, regimenes, fecha').eq('publicada', true).order('fecha', { ascending: false }).limit(40);
+    const { data, error } = await nube.sb.from('noticias').select('id, titulo, resumen, enlace, fuente, temas, regimenes, fecha, automatica, oficial').eq('publicada', true).order('fecha', { ascending: false }).limit(60);
     if (error) return false;
     remotas = (data ?? []).filter((n) => !n.enlace || /^https:\/\//.test(n.enlace));
     guardar(COPIA, { filas: remotas, en: new Date().toISOString() });
@@ -43,7 +45,10 @@ export function paraMi() {
   const regs = regimenesEn(foto.perfil, foto.hoy);
   const ts = temas();
   const ya = new Set(leer(LEIDAS, []));
+  const fuera = new Set(leer(OCULTAS, []));
+  const auto = automaticasActivas();
   return [...remotas, ...delSistema(foto.hoy)]
+    .filter((n) => !fuera.has(n.id) && (auto || !n.automatica))
     .filter((n) => (!n.regimenes?.length || n.regimenes.some((r) => regs.includes(r))) && (!n.temas?.length || n.temas.some((t) => ts.includes(t))))
     .sort((a, b) => b.fecha.localeCompare(a.fecha))
     .map((n) => ({ ...n, leida: ya.has(n.id) }));
@@ -51,3 +56,12 @@ export function paraMi() {
 
 export const sinLeer = () => paraMi().filter((n) => !n.leida);
 export function marcarLeidas(ids) { guardar(LEIDAS, [...new Set([...leer(LEIDAS, []), ...ids])].slice(-300)); }
+
+/** Ocultar en este dispositivo: una noticia, o todas las de resumen automático. */
+export const ocultas = () => leer(OCULTAS, []);
+export function ocultar(id) { guardar(OCULTAS, [...new Set([...ocultas(), id])].slice(-300)); }
+export function mostrarOcultas() { guardar(OCULTAS, []); }
+export const automaticasActivas = () => leer(AUTO, true) !== false;
+export function fijarAutomaticas(v) { guardar(AUTO, !!v); }
+/** ¿Cuántas ocultas siguen en la lista actual? (para ofrecer "mostrar de nuevo") */
+export const cuantasOcultas = () => { const f = new Set(ocultas()); return remotas.filter((n) => f.has(n.id)).length; };
