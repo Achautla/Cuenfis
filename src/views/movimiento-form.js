@@ -2,7 +2,7 @@
 import { CATEGORIAS, categoria, FORMAS_PAGO, PAGADORES } from '../data/catalogo.js';
 import { categoriasDisponibles } from '../core/regimen.js';
 import { calcular } from '../core/motor.js';
-import { agregarMovimiento, editarMovimiento, borrarMovimiento, nuevoId } from '../data/acciones.js';
+import { agregarMovimiento, editarMovimiento, borrarMovimiento, guardarRecurrente, nuevoId } from '../data/acciones.js';
 import { getEstado, getFoto, aplicar } from '../data/store.js';
 import { icon } from '../ui/icons.js';
 import { $, $$, esc, money, hoyISO, toast, fechaLarga } from '../ui/dom.js';
@@ -17,13 +17,14 @@ const TIPOS = { entrada: ['Entrada', 'arrow-down-left'], salida: ['Salida', 'arr
 function cerrar() { dlg().close(); }
 
 /** Abre el formulario. `mov` existente = edición. */
-export function abrirFormulario({ tipo = 'entrada', mov = null } = {}) {
+export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } = {}) {
   const estado = getEstado();
   const perfil = estado.perfil;
   const draft = mov ? structuredClone(mov) : {
     id: nuevoId(), tipo, fecha: hoyISO(), monto: '', cuenta: estado.cuentas.find((c) => c.tipo === 'debito')?.id ?? estado.cuentas[0]?.id,
-    formaPago: 'transferencia', pagador: 'pf', tasaIva: perfil?.frontera ? 0.08 : 0.16, cfdi: false,
+    formaPago: 'transferencia', pagador: 'pf', tasaIva: perfil?.frontera ? 0.08 : 0.16, cfdi: false, ...(preset ?? {}),
   };
+  let repetir = '';
   let confirmarNegativo = false;
 
   const d = dlg();
@@ -42,6 +43,8 @@ export function abrirFormulario({ tipo = 'entrada', mov = null } = {}) {
       </div>
       <div id="zonaCat"></div>
       <div id="zonaExtra"></div>
+      ${mov ? '' : `<label class="field" id="zonaRep"><span>Repetir</span><select name="repetir"><option value="">Solo esta vez</option><option value="mensual">Cada mes, el mismo día</option><option value="quincenal">Cada quincena (15 y fin de mes)</option><option value="semanal">Cada semana</option></select>
+        <span class="hint">Para renta, nómina o suscripciones. Te pediremos confirmarlo cada vez, con el monto real.</span></label>`}
       <div id="preview" aria-live="polite"></div>
     </div>
     <div class="dlg-foot">
@@ -57,6 +60,7 @@ export function abrirFormulario({ tipo = 'entrada', mov = null } = {}) {
     draft.monto = fd.get('monto') === '' ? '' : Number(fd.get('monto'));
     draft.fecha = fd.get('fecha') || hoyISO();
     draft.cuenta = fd.get('cuenta');
+    repetir = fd.get('repetir') ?? '';
     for (const k of ['cuentaDestino', 'formaPago', 'contraparte', 'nota', 'uuid']) if (fd.has(k)) draft[k] = fd.get(k);
     if (fd.has('tasaIva')) { const v = fd.get('tasaIva'); draft.tasaIva = v === 'exento' ? 'exento' : Number(v); }
     draft.cfdi = fd.has('cfdi') ? true : (f.querySelector('[name=cfdi]') ? false : draft.cfdi);
@@ -161,7 +165,13 @@ export function abrirFormulario({ tipo = 'entrada', mov = null } = {}) {
     const antes = getFoto();
     if (mov) aplicar((s) => editarMovimiento(s, mov.id, limpio));
     else aplicar((s) => agregarMovimiento(s, limpio));
+    if (!mov && repetir) {
+      const { id, fecha, historial, uuid, ...plantilla } = limpio;
+      aplicar((s) => guardarRecurrente(s, { nombre: limpio.nota || limpio.contraparte || (limpio.categoria ? categoria(limpio.categoria).nombre : 'Transferencia'),
+        frecuencia: repetir, dia: +fecha.slice(8, 10), desde: fecha, hechas: [fecha], plantilla }));
+    }
     cerrar();
+    if (!mov && repetir) { toast('Guardado. Lo verás en Recurrentes para confirmarlo cada vez.', icon('clock')); return; }
     avisoAlGuardar(antes, getFoto(), draft, !!mov);
   });
 

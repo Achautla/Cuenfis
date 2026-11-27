@@ -26,8 +26,10 @@ src/
     motor.js         Meses RESICO (ISR/IVA, saldo a favor), saldos, Tengo/Debo/Disponible real, anual
     simulador.js     "Si cobro X" y comparación RESICO / actividad empresarial / sueldo
     presupuestos.js  Límites por categoría con avisos al 80% y 100%
+    deudas.js        Tarjetas (corte, pago para no generar intereses, mínimo, interés) y préstamos
+    agenda.js        Recurrentes, metas con ahorro mensual necesario y cuentas por cobrar
   data/            Catálogo de categorías, acciones puras sobre el estado, almacenamiento
-  views/           Una pantalla por archivo (Inicio, Movimientos, Balance, Presupuestos, Indicadores, Declaración, Simulador, Aprende, Ajustes)
+  views/           Una pantalla por archivo (Inicio, Movimientos, Balance, Tarjetas y deudas, Recurrentes, Presupuestos, Metas, Indicadores, Declaración, Clientes y cobros, Simulador, Aprende, Ajustes)
   styles/          tokens, base, layout, componentes y un CSS por pantalla (styles/views)
 public/            manifest, service worker e íconos (PWA)
 supabase/          Migraciones (tablas con seguridad por usuario, RLS)
@@ -43,6 +45,9 @@ tests/             Escenarios de auditoría con resultados calculados a mano
 - RESICO: tasa del mes sobre todo lo cobrado sin IVA (art. 113-E); persona moral retiene 1.25% de ISR y 2/3 del IVA; el saldo a favor de IVA pasa al mes siguiente.
 - Deducciones personales: CFDI y pago bancario; tope general = menor entre 5 UMA anuales y 15% de los ingresos.
 - Gasto de la actividad pagado en efectivo por más de $2,000: su IVA no se acredita.
+- Tarjeta: pago para no generar intereses = saldo al último corte − pagos desde el corte. Pago mínimo estimado = mayor entre 1.5% del saldo y 1.25% del límite (Banxico). El interés lleva IVA.
+- Recurrentes: nunca se registran solos; cada ocurrencia se confirma (con el monto real) u omite.
+- Facturas emitidas: no cuentan para impuestos hasta registrar el cobro, que usa la categoría del régimen con actividad vigente en la fecha del cobro. "Clientes y cobros" solo aparece a quien tiene (o tuvo en el último año) un régimen con actividad.
 
 ## Datos
 

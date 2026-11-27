@@ -1,5 +1,5 @@
 import { getFoto, getEstado, aplicar } from '../data/store.js';
-import { marcarDeclaracion } from '../data/acciones.js';
+import { marcarDeclaracion, guardarAcuse } from '../data/acciones.js';
 import { REGIMENES } from '../data/catalogo.js';
 import { params } from '../core/fiscal.js';
 import { regimenesEnRango } from '../core/regimen.js';
@@ -26,7 +26,41 @@ function estadoMes(m) {
       ${m.estado !== 'pagada' ? `<label class="field inline"><span>Pagar desde</span><select id="ctaPago">${cuentas.map((c) => `<option value="${esc(c.id)}">${esc(c.nombre)}</option>`).join('')}</select></label>` : ''}
       ${m.estado === 'pendiente' ? `<button class="btn" data-est="presentada">${icon('file')}Marcar presentada</button>` : ''}
       ${m.estado !== 'pagada' ? `<button class="btn primary" data-est="pagada">${icon('check')}${m.totalPagar ? 'Marcar pagada' : 'Marcar presentada en ceros'}</button>` : `<button class="btn ghost" data-est="pendiente">Deshacer</button>`}
+    </div>${m.estado !== 'pendiente' ? acuseHTML(m.clave) : ''}</div>`;
+}
+
+const MAX_ACUSE = 1.5 * 1024 * 1024;
+
+function acuseHTML(clave) {
+  const a = getEstado().declaraciones?.[clave]?.acuse ?? {};
+  return `<div class="acuse">
+    <p class="field-label">${icon('file')} Acuse de recibo</p>
+    <div class="acuse-row">
+      <label class="field"><span>Número de operación</span><input id="numOp" inputmode="numeric" maxlength="30" value="${esc(a.numOperacion ?? '')}" placeholder="Viene en tu acuse del SAT" /></label>
+      <label class="field"><span>Línea de captura (opcional)</span><input id="lineaCap" maxlength="40" value="${esc(a.lineaCaptura ?? '')}" style="text-transform:uppercase" /></label>
+    </div>
+    <div class="row">
+      ${a.archivo ? `<a class="btn sm" href="${a.archivo}" download="${esc(a.nombre ?? `acuse-${clave}`)}">${icon('download')}${esc(a.nombre ?? 'Descargar acuse')}</a><button class="btn ghost sm" id="quitarAcuse">${icon('trash')}Quitar archivo</button>`
+        : `<label class="btn sm">${icon('upload')}Adjuntar PDF o foto<input type="file" id="fileAcuse" accept="application/pdf,image/*" hidden /></label><span class="small muted">Hasta 1.5 MB. Se guarda en este dispositivo.</span>`}
     </div></div>`;
+}
+
+function enlazarAcuse(main, clave) {
+  const guardar = (cambios, msg) => { aplicar((s) => guardarAcuse(s, clave, cambios)); if (msg) toast(msg, icon('check-circle')); };
+  $('#numOp', main)?.addEventListener('change', (e) => guardar({ numOperacion: e.target.value.trim() }, 'Número de operación guardado'));
+  $('#lineaCap', main)?.addEventListener('change', (e) => guardar({ lineaCaptura: e.target.value.trim().toUpperCase() }, 'Línea de captura guardada'));
+  $('#quitarAcuse', main)?.addEventListener('click', () => guardar({ archivo: undefined, nombre: undefined }, 'Archivo quitado'));
+  $('#fileAcuse', main)?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > MAX_ACUSE) { toast('El archivo pesa más de 1.5 MB. Prueba con el PDF del SAT o una foto más ligera.', icon('alert')); return; }
+    const r = new FileReader();
+    r.onload = () => {
+      if (aplicar((s) => guardarAcuse(s, clave, { archivo: r.result, nombre: file.name, tipo: file.type, subido: new Date().toISOString() }))) toast('Acuse guardado', icon('check-circle'));
+      else { aplicar((s) => guardarAcuse(s, clave, { archivo: undefined, nombre: undefined })); toast('No hay espacio en este dispositivo para el archivo. Guarda solo el número de operación.', icon('alert')); }
+    };
+    r.readAsDataURL(file);
+  });
 }
 
 function isr(m) {
@@ -144,6 +178,7 @@ export function render(main) {
   main.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { tab = b.dataset.tab; render(main); }));
   $('#selMes', main)?.addEventListener('change', (e) => { mesSel = e.target.value; render(main); });
   $('#selAnio', main)?.addEventListener('change', (e) => { anioSel = +e.target.value; render(main); });
+  if (m && tab !== 'anual') enlazarAcuse(main, mesSel);
   main.querySelectorAll('[data-est]').forEach((b) => (b.onclick = () => {
     const est = b.dataset.est === 'pagada' && !m.totalPagar ? 'presentada' : b.dataset.est;
     aplicar((s) => marcarDeclaracion(s, mesSel, est, { cuenta: $('#ctaPago', main)?.value, fecha: foto.hoy, hoy: foto.hoy }));

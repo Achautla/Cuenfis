@@ -10,7 +10,6 @@
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 .cat-bars { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
 .cat-bars li { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; align-items: center; }
-.avatar.sm { width: 32px; height: 32px; border-radius: 10px; } .avatar.sm svg.i { width: 16px; height: 16px; }
 .cb-main { display: grid; gap: 6px; }
 .cb-top { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
 .cb-track { height: 6px; background: var(--surface-2); border-radius: 99px; overflow: hidden; }

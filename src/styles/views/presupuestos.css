@@ -14,4 +14,3 @@
 .pres-list li.excedido .pl-track i { background: var(--out); }
 .pl-in input { min-height: 40px; text-align: right; font-size: 15px; padding: 6px 10px; }
 @media (max-width: 480px) { .pres-list li { grid-template-columns: 32px minmax(0, 1fr) 96px; } }
-.avatar.sm { width: 32px; height: 32px; border-radius: 10px; } .avatar.sm svg.i { width: 16px; height: 16px; }

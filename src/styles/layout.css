@@ -48,9 +48,17 @@
   .sidebar { position: sticky; top: 0; height: 100dvh; padding: 20px 12px; }
   .sidebar .brand { padding: 4px 8px 24px; }
   .nav { flex-direction: column; gap: 2px; }
-  .nav a { padding: 10px 12px; }
   .nav a .lbl-short { display: none; }
   .nav .mas { display: none; }
   .main { padding: 28px 32px 64px; }
   .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.nav-g { display: none; }
+.mas-g { font-size: 12px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; margin: 12px 12px 4px; }
+.mas-g:first-child { margin-top: 0; }
+@media (min-width: 900px) {
+  .nav-g { display: block; font-size: 11px; font-weight: 600; color: #7f93ad; text-transform: uppercase; letter-spacing: .06em; padding: 14px 12px 4px; }
+  .nav-g:first-child { padding-top: 0; }
+  .sidebar { overflow-y: auto; }
+  .nav a { padding: 8px 12px; }
 }

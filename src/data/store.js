@@ -18,7 +18,7 @@ function cargar() {
 }
 
 function guardar() {
-  try { localStorage.setItem(CLAVE, JSON.stringify(estado)); } catch { /* sin almacenamiento */ }
+  try { localStorage.setItem(CLAVE, JSON.stringify(estado)); return true; } catch { return false; /* sin espacio o sin almacenamiento */ }
 }
 
 export const getEstado = () => estado;
@@ -29,12 +29,13 @@ export function getFoto() {
   return foto;
 }
 
-/** Aplica una acción pura `fn(estado) => estado` y notifica a las pantallas. */
+/** Aplica una acción pura `fn(estado) => estado` y notifica a las pantallas. Devuelve false si no se pudo guardar. */
 export function aplicar(fn) {
   estado = fn(estado);
   foto = null;
-  guardar();
+  const ok = guardar();
   subs.forEach((s) => s());
+  return ok;
 }
 
 export const suscribir = (fn) => (subs.add(fn), () => subs.delete(fn));

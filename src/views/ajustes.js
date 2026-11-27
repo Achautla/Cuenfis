@@ -42,7 +42,7 @@ export function render(main) {
 
     <div class="card">
       <div class="card-head"><h2>Cuentas</h2></div>
-      <p class="small muted" style="margin-bottom:10px">En una tarjeta de crédito o préstamo, el saldo es lo que debes: una compra lo aumenta y un pago lo baja.</p>
+      <p class="small muted" style="margin-bottom:10px">En una tarjeta de crédito o préstamo, el saldo es lo que debes: una compra lo aumenta y un pago lo baja. El límite, el día de corte y la tasa se capturan en <a href="#/deudas">Tarjetas y deudas</a>.</p>
       <div class="table-wrap"><table class="acc-table"><thead><tr><th>Nombre</th><th>Tipo</th><th class="n">Saldo inicial</th><th class="n">Saldo hoy</th><th></th></tr></thead><tbody>
       ${foto.cuentas.map((c) => { const usada = e.movimientos.some((m) => m.cuenta === c.id || m.cuentaDestino === c.id); return `<tr data-cta="${esc(c.id)}">
         <td><input name="nombre" value="${esc(c.nombre)}" aria-label="Nombre" /></td>
@@ -59,12 +59,7 @@ export function render(main) {
       </form>
     </div>
 
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-head"><h2>Metas</h2></div>
-        <form id="fPref"><label class="field"><span>Meta de ahorro mensual</span><input name="metaAhorro" type="number" min="0" step="100" value="${esc(e.preferencias?.metaAhorro || '')}" /></label>
-        <button class="btn primary">${icon('check')}Guardar</button></form>
-      </div>
+    <div>
       <div class="card">
         <div class="card-head"><h2>Tus datos</h2></div>
         <p class="small muted" style="margin-bottom:12px">${icon('lock')} Por ahora tus datos se guardan solo en este dispositivo. Descarga un respaldo de vez en cuando.</p>
@@ -96,8 +91,6 @@ export function render(main) {
   main.querySelectorAll('[data-borrar-cta]').forEach((b) => (b.onclick = () => { const id = b.closest('tr').dataset.cta; aplicar((s) => ({ ...s, cuentas: s.cuentas.filter((c) => c.id !== id) })); }));
   $('#fCta', main).onsubmit = (ev) => { ev.preventDefault(); const f = new FormData(ev.target);
     aplicar((s) => ({ ...s, cuentas: [...s.cuentas, { id: nuevoId(), nombre: f.get('nombre').trim(), tipo: f.get('tipo'), saldoInicial: Number(f.get('saldoInicial')) || 0 }] })); toast('Cuenta agregada', icon('check-circle')); };
-  $('#fPref', main).onsubmit = (ev) => { ev.preventDefault(); const f = new FormData(ev.target);
-    aplicar((s) => ({ ...s, preferencias: { ...s.preferencias, metaAhorro: Number(f.get('metaAhorro')) || 0 } })); toast('Meta guardada', icon('check-circle')); };
 
   $('#exp', main).onclick = () => descargar(`cuenfis-respaldo-${hoyISO()}.json`, JSON.stringify(getEstado(), null, 2), 'application/json');
   $('#imp', main).onchange = async (ev) => {

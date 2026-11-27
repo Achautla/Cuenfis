@@ -3,11 +3,13 @@ import { periodo, rangoMes, ym, colchon } from '../core/motor.js';
 import { vigente, vigenteEnRango } from '../core/regimen.js';
 import { TIPOS_CUENTA } from '../data/catalogo.js';
 import { icon } from '../ui/icons.js';
-import { $, esc, money, pct, Mes, nombreMes, countTo } from '../ui/dom.js';
+import { $, esc, money, pct, Mes, nombreMes, countTo, fechaCorta } from '../ui/dom.js';
 import { listaAgrupada } from './comun.js';
 import { estadoPresupuestos } from '../core/presupuestos.js';
 import { categoria } from '../data/catalogo.js';
 import { abrirFormulario } from './movimiento-form.js';
+import { estadoTarjeta } from '../core/deudas.js';
+import { pendientesRecurrentes, progresoMeta, resumenClientes } from '../core/agenda.js';
 import '../styles/views/inicio.css';
 
 function proximasFechas(foto) {
@@ -28,6 +30,12 @@ function proximasFechas(foto) {
     const an = foto.anual(hoy.getMonth() > 3 ? y : y - 1);
     out.push({ t: `Declaración anual ${an.anio}`, s: an.aFavor ? `Saldo a favor estimado ${money(an.aFavor)}` : an.aCargo ? `A cargo estimado ${money(an.aCargo)}` : 'Sueldos y salarios', f: new Date(an.anio + 1, 3, 30) });
   }
+  for (const c of foto.cuentas.filter((x) => x.tipo === 'credito')) {
+    const t = estadoTarjeta(foto, c);
+    if (!t.configurada || t.saldoCorte <= 0) continue;
+    out.push({ t: `Pago de ${c.nombre}`, s: t.cubierto ? 'Saldo del corte cubierto' : `Para no generar intereses: ${money(t.pagoSinIntereses)}`, f: new Date(t.limitePago + 'T12:00:00'), ok: t.cubierto, link: '#/deudas' });
+  }
+  out.sort((a, b) => a.f - b.f);
   return out.map((x) => {
     const dias = Math.ceil((x.f - hoy) / 864e5);
     return `<li class="date-item ${dias <= 7 && !x.ok ? 'soon' : ''}"><span class="cal"><b>${x.f.getDate()}</b>${esc(Mes(x.f.getMonth()).slice(0, 3))}</span>
@@ -51,6 +59,9 @@ export function render(main) {
   const pres = estadoPresupuestos(foto, estado.presupuestos ?? {}, k);
   const ultimos = [...foto.movs].reverse().slice(0, 6);
   const nombre = foto.perfil?.nombre?.split(' ')[0] ?? '';
+  const pendRec = pendientesRecurrentes(estado, foto.hoy);
+  const metasP = (estado.metas ?? []).map((m) => ({ m, p: progresoMeta(m, foto) })).filter(({ p }) => !p.lograda).slice(0, 3);
+  const cxc = (estado.facturas ?? []).length ? resumenClientes(estado, foto.hoy) : null;
 
   main.innerHTML = `<section class="view inicio">
     <div class="page-head"><div><h1>Hola${nombre ? `, ${esc(nombre)}` : ''}</h1><p class="sub">${esc(nombreMes(k))}</p></div><span class="spacer"></span>
@@ -70,6 +81,8 @@ export function render(main) {
       </div>
     </div>
 
+    ${pendRec.length ? `<a class="notice action" href="#/recurrentes">${icon('clock')}<span><b>${pendRec.length === 1 ? `Confirma "${esc(pendRec[0].rec.nombre)}"` : `Tienes ${pendRec.length} movimientos recurrentes por confirmar`}</b>${pendRec.length === 1 ? `Tocaba el ${esc(fechaCorta(pendRec[0].fecha))} por ${money(pendRec[0].rec.plantilla.monto)}. Confírmalo para que tu saldo cuadre.` : `${esc(pendRec.slice(0, 3).map((x) => x.rec.nombre).join(', '))}. Revisa los montos y confírmalos para que tu saldo cuadre.`}</span></a>` : ''}
+    ${cxc?.vencido ? `<a class="notice warn action" href="#/clientes">${icon('receipt')}<span><b>Te deben ${money(cxc.vencido)} de facturas vencidas.</b>Da seguimiento a tus clientes. Recuerda: para tus impuestos solo cuenta lo que ya cobraste.</span></a>` : ''}
     ${foto.avisos.filter((x) => x.nivel === 'alerta').slice(0, 3).map((x) => `<div class="notice warn">${icon('alert')}<span>${esc(x.texto)}</span></div>`).join('')}
 
     <div class="kpis">
@@ -79,6 +92,11 @@ export function render(main) {
       <div class="kpi"><span class="k-ico">${icon('lifebuoy')}</span><span class="k-lbl">Colchón</span><b class="num">${col == null ? '—' : `${col.toFixed(1)} meses`}</b><small>Meses que cubres con tu disponible</small></div>
     </div>
     ${meta ? `<div class="card goal"><div class="row"><b>${icon('target')} Meta de ahorro mensual</b><span class="spacer"></span><span class="num small">${money(Math.max(0, mes.ahorro))} de ${money(meta)}</span></div><div class="progress"><i style="width:${Math.min(100, Math.max(0, mes.ahorro) / meta * 100)}%"></i></div></div>` : ''}
+
+    ${metasP.length ? `<div class="card">
+      <div class="card-head"><h2>Mis metas</h2><span class="spacer"></span><a class="link" href="#/metas">Ver todas</a></div>
+      <ul class="pres-mini">${metasP.map(({ m, p }) => `<li class="ok"><span>${esc(m.nombre)}</span><span class="pm-track"><i style="width:${p.avance * 100}%"></i></span><span class="num small">${money(p.actual)} / ${money(p.objetivo)}</span></li>`).join('')}</ul>
+    </div>` : ''}
 
     ${pres.filas.length ? `<div class="card">
       <div class="card-head"><h2>Presupuestos de ${esc(nombreMes(k).split(' ')[0].toLowerCase())}</h2><span class="spacer"></span><a class="link" href="#/presupuestos">Ver todos</a></div>

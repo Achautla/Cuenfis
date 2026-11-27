@@ -45,3 +45,16 @@ export function categoriasDisponibles(perfil, fecha, tipo, CATEGORIAS, actual) {
     c.id === actual ||
     (c.clase === 'ingreso' ? regs.includes(c.reg) : c.clase === 'actividad' ? conActividad : true));
 }
+
+/** ¿Tiene (o tuvo en el último año) un régimen con actividad propia que facture? Para mostrar Clientes y cobros. */
+export function facturaPorActividad(perfil, fecha) {
+  const haceUnAnio = `${+fecha.slice(0, 4) - 1}${fecha.slice(4)}`;
+  return regimenesEnRango(perfil, haceUnAnio, fecha).some((r) => REGIMENES[r]?.actividad);
+}
+
+/** Categoría de ingreso del régimen con actividad vigente en `fecha` (para registrar un cobro). */
+export function categoriaDeCobro(perfil, fecha, CATEGORIAS) {
+  const regs = regimenesEn(perfil, fecha).filter((r) => REGIMENES[r]?.actividad);
+  const orden = [...regs].sort((a, b) => (REGIMENES[b].calculo ? 1 : 0) - (REGIMENES[a].calculo ? 1 : 0));
+  return orden.map((r) => CATEGORIAS.find((c) => c.clase === 'ingreso' && c.reg === r)).find(Boolean) ?? null;
+}
