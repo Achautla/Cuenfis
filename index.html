@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Cuenfis</title>
+  <meta name="description" content="Tus entradas y salidas en orden, y tus impuestos claros, como los pide el SAT." />
+  <meta name="theme-color" content="#0a2540" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="app">
+    <header class="mobile-top"><a class="brand" href="#/inicio"><img src="/icons/icon.svg" alt="" />Cuenfis</a></header>
+    <aside class="sidebar">
+      <a class="brand" href="#/inicio"><img src="/icons/icon.svg" alt="" />Cuenfis</a>
+      <nav class="nav" id="nav" aria-label="Secciones"></nav>
+      <p class="side-foot">Cálculos estimados con reglas 2026. No sustituyen a un contador.</p>
+    </aside>
+    <main class="main" id="main" tabindex="-1"></main>
+  </div>
+  <button class="fab" id="fab" hidden><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>Registrar</button>
+  <dialog id="dlg"></dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

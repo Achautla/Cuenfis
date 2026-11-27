@@ -1,0 +1,16 @@
+.toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; padding: 14px 16px; }
+.toolbar .spacer { flex: 1; }
+.field.inline { margin: 0; min-width: 180px; }
+.sat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow-1); }
+.sat h3 { padding: 14px 20px; background: var(--navy); color: #fff; font-size: 15px; }
+.sat .tabn { font-size: 12px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; padding: 14px 20px 6px; }
+.sat .f { display: grid; grid-template-columns: minmax(0, 1fr) 36px 130px; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--line); align-items: center; font-size: 14px; }
+.sat .f small { display: block; color: var(--ink-3); font-size: 12px; margin-top: 2px; }
+.sat .f .op { color: var(--ink-3); text-align: center; font-size: 13px; }
+.sat .f .v { text-align: right; font-weight: 600; }
+.sat .f.tot { background: var(--surface-2); }
+@media (max-width: 560px) { .sat .f { grid-template-columns: minmax(0, 1fr) 28px 96px; padding: 10px 14px; } .sat .tabn, .sat h3 { padding-inline: 14px; } }
+.estado { display: grid; gap: 10px; }
+.estado .row b { margin-right: 4px; }
+.estado .spacer { flex: 1; }
+.estado .field.inline { min-width: 200px; flex: 0 1 240px; }

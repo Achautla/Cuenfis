@@ -1,0 +1,8 @@
+.welcome { min-height: calc(100dvh - 80px); place-items: center; }
+.welcome-card { max-width: 600px; width: 100%; display: grid; gap: 12px; padding: 28px; }
+.welcome-card img { border-radius: 12px; }
+.welcome-card form { margin-top: 8px; display: grid; }
+.regs { border: 1px solid var(--line); border-radius: var(--r-md); padding: 12px 14px 4px; margin: 0 0 14px; }
+.regs legend { font-size: 13px; font-weight: 500; color: var(--ink-2); padding: 0 6px; }
+.btn.big { min-height: 52px; font-size: 16px; margin-bottom: 8px; }
+@media (min-width: 900px) { .app:has(.sidebar[hidden]) { grid-template-columns: minmax(0, 1fr); } }

@@ -1,0 +1,13 @@
+.timeline { list-style: none; margin: 0 0 12px; padding: 0; }
+.timeline li { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.timeline li > .row { grid-column: 2; }
+.timeline li input[type="date"] { width: auto; min-height: 36px; padding: 4px 8px; font-size: 14px; }
+.timeline .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--in); margin-top: 6px; box-shadow: 0 0 0 3px var(--in-soft); }
+.timeline .dot.off { background: var(--line-2); box-shadow: none; }
+.add-row { margin-top: 12px; }
+.add-row > * { flex: 1 1 140px; width: auto; }
+.add-row .btn { flex: 0 0 auto; }
+.acc-table { min-width: 560px; }
+.acc-table input, .acc-table select { min-height: 38px; padding: 6px 10px; font-size: 14px; }
+.acc-table td.n input { text-align: right; }
+.ajustes .small svg.i { width: 14px; height: 14px; vertical-align: -2px; }

@@ -1,0 +1,58 @@
+/* Tokens de diseño: banca formal. Marino profundo como base, un acento cielo, verde/coral solo para dinero. */
+:root {
+  color-scheme: light;
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #f7f9fb;
+  --ink: #0d1b2a;
+  --ink-2: #44546a;
+  --ink-3: #6b7a90;
+  --line: #e2e7ee;
+  --line-2: #d3dae4;
+  --navy: #0a2540;
+  --navy-2: #13355a;
+  --accent: #2f80ed;
+  --accent-soft: #e8f1fd;
+  --in: #0f8a6c;
+  --in-soft: #e6f5f0;
+  --out: #c2410c;
+  --out-soft: #fdf0e9;
+  --warn: #a15c00;
+  --warn-soft: #fff5e0;
+  --sat: #5b3cc4;
+  --sat-soft: #f0ecfc;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --shadow-1: 0 1px 2px rgba(13, 27, 42, .06);
+  --shadow-2: 0 8px 24px rgba(13, 27, 42, .08);
+
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 32px;
+
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-num: 'Inter Tight', 'Inter', system-ui, sans-serif;
+
+  --t-fast: 120ms;
+  --t-med: 220ms;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0a1420; --surface: #111e2e; --surface-2: #15243a; --ink: #e8eef6; --ink-2: #b4c1d2; --ink-3: #8798ad;
+    --line: #1f3148; --line-2: #2a3f59; --accent: #6aa8ff; --accent-soft: #15304f;
+    --in: #34c79f; --in-soft: #0f2d27; --out: #ff8a5b; --out-soft: #35201a; --warn: #ffbf5e; --warn-soft: #33270f;
+    --sat: #a993ff; --sat-soft: #241c45;
+    --shadow-1: none; --shadow-2: 0 8px 24px rgba(0, 0, 0, .35);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0a1420; --surface: #111e2e; --surface-2: #15243a; --ink: #e8eef6; --ink-2: #b4c1d2; --ink-3: #8798ad;
+  --line: #1f3148; --line-2: #2a3f59; --accent: #6aa8ff; --accent-soft: #15304f;
+  --in: #34c79f; --in-soft: #0f2d27; --out: #ff8a5b; --out-soft: #35201a; --warn: #ffbf5e; --warn-soft: #33270f;
+  --sat: #a993ff; --sat-soft: #241c45;
+  --shadow-1: none; --shadow-2: 0 8px 24px rgba(0, 0, 0, .35);
+}

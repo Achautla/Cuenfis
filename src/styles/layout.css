@@ -1,0 +1,48 @@
+/* Estructura: barra lateral en escritorio, barra inferior en celular. */
+.app { min-height: 100dvh; }
+.sidebar {
+  background: var(--navy); color: #fff; display: flex; flex-direction: column;
+}
+.brand { display: flex; align-items: center; gap: 10px; font: 700 18px var(--font-num); color: #fff; text-decoration: none; }
+.brand img { width: 28px; height: 28px; border-radius: 8px; }
+.nav { display: flex; }
+.nav a {
+  display: flex; align-items: center; gap: 10px; color: #b9c6d8; text-decoration: none;
+  font-weight: 500; font-size: 14px; border-radius: var(--r-sm); transition: background var(--t-fast), color var(--t-fast);
+}
+.nav a:hover { color: #fff; background: rgba(255, 255, 255, .06); }
+.nav a[aria-current="page"] { color: #fff; background: rgba(255, 255, 255, .1); }
+.nav a[aria-current="page"] svg { color: #8fc1ff; }
+.side-foot { margin-top: auto; font-size: 12px; color: #8ea2bb; padding: 12px 8px; line-height: 1.4; }
+
+.main { padding: 20px 16px 120px; max-width: 1120px; margin: 0 auto; }
+.page-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.page-head .sub { color: var(--ink-3); font-size: 13px; }
+.page-head .spacer { flex: 1; }
+
+.view { display: grid; gap: 16px; animation: enter var(--t-med) var(--ease); }
+@keyframes enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.grid-2 { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+.grid-3 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+
+.mobile-top { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--navy); position: sticky; top: 0; z-index: 20; }
+.mobile-top .brand { font-size: 17px; }
+
+@media (max-width: 899px) {
+  .sidebar { position: fixed; inset: auto 0 0 0; z-index: 30; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+  .sidebar .brand, .side-foot { display: none; }
+  .nav { justify-content: space-around; }
+  .nav a { flex-direction: column; gap: 2px; font-size: 11px; padding: 6px 4px; min-width: 56px; min-height: 48px; justify-content: center; }
+  .nav a .lbl-long { display: none; }
+}
+@media (min-width: 900px) {
+  .app { display: grid; grid-template-columns: 232px minmax(0, 1fr); }
+  .mobile-top { display: none; }
+  .sidebar { position: sticky; top: 0; height: 100dvh; padding: 20px 12px; }
+  .sidebar .brand { padding: 4px 8px 24px; }
+  .nav { flex-direction: column; gap: 2px; }
+  .nav a { padding: 10px 12px; }
+  .nav a .lbl-short { display: none; }
+  .main { padding: 28px 32px 64px; }
+  .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
