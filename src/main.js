@@ -13,7 +13,7 @@ import './styles/components.css';
 
 import { injectSprite, icon } from './ui/icons.js';
 import { $, esc } from './ui/dom.js';
-import { getEstado, suscribir } from './data/store.js';
+import { getEstado, suscribir, alRecalcular } from './data/store.js';
 import { regimenesEn, facturaPorActividad } from './core/regimen.js';
 import { hoyISO } from './ui/dom.js';
 import * as inicio from './views/inicio.js';
@@ -33,7 +33,13 @@ import * as clientes from './views/clientes.js';
 import * as cuenta from './views/cuenta.js';
 import * as avisos from './views/avisos.js';
 import * as reportes from './views/reportes.js';
+import * as reglasVista from './views/reglas.js';
+import { activarFuentes } from './ui/fuente.js';
+import * as reglasRemotas from './data/reglas-remotas.js';
 import * as legal from './views/legal.js';
+import * as asistente from './views/asistente.js';
+import { preguntarSiHaceFalta, sincronizarConsentimiento } from './ia/consentimiento.js';
+import { reintentarReal } from './ia/conversacion.js';
 import { abrirFormulario } from './views/movimiento-form.js';
 import { arrancar as arrancarSync, subirAhora } from './data/sync.js';
 import * as nube from './data/nube.js';
@@ -45,6 +51,7 @@ import { nativo } from './native.js';
 // p: aparece en la barra inferior del celular; el resto va en "Más". g: grupo del menú. ver: cuándo se muestra.
 const RUTAS = {
   inicio: { v: inicio, t: 'Inicio', i: 'home', p: 1, g: 'dinero' },
+  asistente: { v: asistente, t: 'Asistente', i: 'sparkle', g: 'dinero' },
   avisos: { v: avisos, t: 'Avisos', i: 'bell', g: 'dinero' },
   movimientos: { v: movimientos, t: 'Movimientos', i: 'list', p: 1, g: 'dinero' },
   balance: { v: balance, t: 'Balance', i: 'scale', p: 1, g: 'dinero' },
@@ -57,6 +64,7 @@ const RUTAS = {
   clientes: { v: clientes, t: 'Clientes y cobros', i: 'receipt', g: 'sat', ver: (e) => facturaPorActividad(e.perfil, hoyISO()) || (e.facturas ?? []).length > 0 },
   reportes: { v: reportes, t: 'Reportes para contador', c: 'Reportes', i: 'printer', g: 'sat' },
   simulador: { v: simulador, t: 'Simulador', i: 'sparkle', g: 'sat' },
+  reglas: { v: reglasVista, t: 'Reglas fiscales', c: 'Reglas', i: 'landmark', g: 'sat' },
   aprende: { v: aprende, t: 'Aprende', i: 'book', g: 'mas' },
   cuenta: { v: cuenta, t: 'Cuenta y nube', i: 'cloud', g: 'mas' },
   ajustes: { v: ajustes, t: 'Ajustes', i: 'settings', g: 'mas' },
@@ -106,6 +114,7 @@ function render() {
   if (!e.perfil) {
     document.querySelector('.sidebar').hidden = true;
     $('#fab').hidden = true;
+    $('#iaTop').hidden = true;
     // Sin perfil solo se puede ver la bienvenida o iniciar sesión para traer tus datos
     const r0 = location.hash.replace(/^#\/?/, '').split('?')[0];
     if (r0 === 'cuenta') cuenta.render(main);
@@ -116,7 +125,11 @@ function render() {
   document.querySelector('.sidebar').hidden = false;
   const r = ruta();
   pintarNav(r);
-  $('#fab').hidden = false;
+  $('#fab').hidden = r === 'asistente';
+  const iaTop = $('#iaTop');
+  iaTop.hidden = r === 'asistente';
+  if (!iaTop.innerHTML) iaTop.innerHTML = icon('sparkle');
+  setTimeout(preguntarSiHaceFalta, 600);
   document.title = `${RUTAS[r].t} · Cuenfis`;
   RUTAS[r].v.render(main);
   // Tablas con desplazamiento horizontal: alcanzables con teclado
@@ -124,6 +137,8 @@ function render() {
 }
 
 injectSprite();
+reglasRemotas.cargarCopia(); // reglas fiscales de la última actualización, antes de pintar
+activarFuentes();
 
 // Si algo falla, que no se quede en silencio: aviso amable y la app sigue (los datos ya están guardados)
 let ultimoAviso = 0;
@@ -137,6 +152,8 @@ window.addEventListener('error', (ev) => falla(ev.error ?? ev.message));
 window.addEventListener('unhandledrejection', (ev) => falla(ev.reason));
 window.addEventListener('hashchange', () => { render(); $('#main').focus({ preventScroll: true }); window.scrollTo(0, 0); });
 suscribir(render);
+alRecalcular(render);
+reglasRemotas.actualizar(); // trae correcciones o reglas de un año nuevo sin publicar otra versión de la app
 $('#fab').onclick = () => abrirFormulario({ tipo: 'entrada' });
 
 // Indicador de sincronización (solo con sesión)
@@ -184,6 +201,9 @@ document.addEventListener('click', (ev) => { if (!$('#syncPanel').hidden && !ev.
 document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !$('#syncPanel').hidden) abrirPanel(false); });
 window.addEventListener('hashchange', () => abrirPanel(false));
 nube.alCambiar(pintarSync);
+// Al entrar o salir de la cuenta, el asistente vuelve a intentar con la IA real y sube el consentimiento pendiente
+let ultimoUsuario = null;
+nube.alCambiar((s) => { const id = s.usuario?.id ?? null; if (id !== ultimoUsuario) { ultimoUsuario = id; reintentarReal(); sincronizarConsentimiento(); } });
 arrancarSync();
 render();
 

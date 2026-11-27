@@ -2,6 +2,8 @@ import { getFoto, getEstado, aplicar } from '../data/store.js';
 import { marcarDeclaracion, guardarAcuse } from '../data/acciones.js';
 import { REGIMENES } from '../data/catalogo.js';
 import { params } from '../core/fiscal.js';
+import { reglas } from '../core/reglas.js';
+import { chipFuente, avisoProvisional, leyenda } from '../ui/fuente.js';
 import { regimenesEnRango } from '../core/regimen.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, money, pct, nombreMes, fechaLarga, toast, descargar } from '../ui/dom.js';
@@ -11,7 +13,8 @@ import '../styles/views/declaracion.css';
 
 let tab = null, mesSel = null, anioSel = null;
 
-const F = (label, op, v, help = '', tot = false) => `<div class="f${tot ? ' tot' : ''}"><span>${tot ? `<b>${esc(label)}</b>` : esc(label)}${help ? `<small>${esc(help)}</small>` : ''}</span><span class="op">${op}</span><span class="v num">${typeof v === 'number' ? money(v).replace('$', '') : esc(v)}</span></div>`;
+// src: [clave del dato fiscal, año] para mostrar "¿De dónde sale?" (ver src/core/params/fuentes.js)
+const F = (label, op, v, help = '', tot = false, src = null) => `<div class="f${tot ? ' tot' : ''}"><span>${tot ? `<b>${esc(label)}</b>` : esc(label)}${help ? `<small>${esc(help)}</small>` : ''}${src ? chipFuente(...src) : ''}</span><span class="op">${op}</span><span class="v num">${typeof v === 'number' ? money(v).replace('$', '') : esc(v)}</span></div>`;
 
 function limite(clave) {
   const [y, m] = clave.split('-').map(Number);
@@ -96,6 +99,7 @@ function enlazarAcuse(main, clave) {
 }
 
 function isr(m) {
+  const y = +m.clave.slice(0, 4);
   const cobros = getFoto().movs.filter((x) => m.cobros.includes(x.id));
   const pm = cobros.filter((x) => x.pagador === 'pm').length;
   return `<div class="sat"><h3>ISR simplificado de confianza. Personas físicas · ${esc(nombreMes(m.clave))}</h3>
@@ -107,36 +111,37 @@ function isr(m) {
     ${F('Ingresos adicionales', '(+)', 0, 'Cobros sin factura o que no aparecen en el prellenado.')}
     ${F('Total de ingresos percibidos por la actividad', '(=)', m.total, 'Al capturar, detállalo por concepto (servicios profesionales, actividad empresarial, etc.).', true)}
     <p class="tabn">Pestaña Determinación</p>
-    ${F('Tasa aplicable', '(×)', pct(m.tasa, 2), 'Tabla mensual del art. 113-E: se aplica a todo el ingreso del mes.')}
+    ${F('Tasa aplicable', '(×)', pct(m.tasa, 2), 'Tabla mensual del art. 113-E: se aplica a todo el ingreso del mes.', false, ['resico.mensual', y])}
     ${F('ISR determinado', '(=)', m.isrDet)}
-    ${F('ISR retenido por personas morales', '(−)', m.isrRet, pm ? `${pm} cobro(s) a empresas: 1.25% de su subtotal.` : 'Solo si te pagó una empresa.')}
+    ${F('ISR retenido por personas morales', '(−)', m.isrRet, pm ? `${pm} cobro(s) a empresas: ${pct(params(y).resico.retencionIsrPM, 2)} de su subtotal.` : 'Solo si te pagó una empresa.', false, ['resico.retencionIsrPM', y])}
     ${F('ISR a cargo', '(=)', m.isrCargo, m.isrFavor ? `Las retenciones superan el impuesto por ${money(m.isrFavor)}.` : '', true)}
     <p class="tabn">Pestaña Pago</p>
     ${F('¿Tienes compensaciones por aplicar?', '', 'No')}
     ${F('¿Tienes estímulos por aplicar?', '', 'No')}
-    ${F('Cantidad a pagar', '(=)', m.isrCargo, `Fecha límite: ${limite(m.clave)}.`, true)}
+    ${F('Cantidad a pagar', '(=)', m.isrCargo, `Fecha límite: ${limite(m.clave)}.`, true, ['diaLimiteMensual', y])}
   </div>
   <div class="notice">${icon('info')}<span>El pago mensual de RESICO es definitivo. Si en el mes no cobraste nada, presenta la declaración en ceros: omitir 3 o más meses en un año te saca del régimen (art. 113-I).</span></div>`;
 }
 
 function iva(m) {
+  const y = +m.clave.slice(0, 4);
   const foto = getFoto();
   const no = foto.movs.filter((x) => m.acredNo.includes(x.id));
   return `<div class="sat"><h3>IVA simplificado de confianza · ${esc(nombreMes(m.clave))}</h3>
     <p class="tabn">Pestaña Determinación</p>
-    ${F('Actividades gravadas a la tasa del 16%', '', m.g16)}
-    ${F('Actividades gravadas a la tasa del 8%', '', m.g8, 'Solo con el estímulo de región fronteriza.')}
+    ${F('Actividades gravadas a la tasa del 16%', '', m.g16, '', false, ['iva.general', y])}
+    ${F('Actividades gravadas a la tasa del 8%', '', m.g8, 'Solo con el estímulo de región fronteriza.', false, ['iva.frontera', y])}
     ${F('Actividades gravadas a la tasa del 0%, exentas o no objeto', '', m.g0)}
     ${F('Total de IVA a cargo', '(=)', m.ivaTrasladado, '', true)}
     ${F('IVA no cobrado por devoluciones, descuentos y bonificaciones', '(−)', 0)}
-    ${F('IVA retenido', '(−)', m.ivaRet, 'Lo que te retuvieron las empresas (2/3 del IVA).')}
-    ${F('IVA acreditable del periodo', '(−)', m.ivaAcred, 'Captura manual: IVA de gastos de tu actividad con CFDI y pago bancario (o efectivo hasta $2,000).')}
+    ${F('IVA retenido', '(−)', m.ivaRet, 'Lo que te retuvieron las empresas (2/3 del IVA).', false, ['iva.retencionPM', y])}
+    ${F('IVA acreditable del periodo', '(−)', m.ivaAcred, `Captura manual: IVA de gastos de tu actividad con CFDI y pago bancario (o efectivo hasta ${money(params(y).topeEfectivo)}).`, false, ['topeEfectivo', y])}
     ${F('IVA por devoluciones, descuentos y bonificaciones en gastos', '(+)', 0)}
     ${F(m.ivaNeto >= 0 ? 'Cantidad a cargo' : 'Saldo a favor', '(=)', Math.abs(m.ivaNeto), '', true)}
     ${F('Acreditamiento del saldo a favor de periodos anteriores', '(−)', m.favorAplicado, m.favorAnterior ? `Tenías ${money(m.favorAnterior)} a favor de meses anteriores.` : '')}
     ${F('Impuesto a cargo', '(=)', m.ivaCargo, m.favorSiguiente ? `Saldo a favor que pasa al siguiente mes: ${money(m.favorSiguiente)}.` : '', true)}
     <p class="tabn">Pestaña Pago</p>
-    ${F('Cantidad a pagar', '(=)', m.ivaCargo, `Fecha límite: ${limite(m.clave)}.`, true)}
+    ${F('Cantidad a pagar', '(=)', m.ivaCargo, `Fecha límite: ${limite(m.clave)}.`, true, ['diaLimiteMensual', y])}
   </div>
   ${no.length ? `<div class="notice warn">${icon('alert')}<span><b>${no.length} gasto(s) de tu actividad no cuentan para el IVA.</b>${esc(no.map((x) => x.d.motivos[0]).filter(Boolean)[0] ?? '')}</span></div>` : ''}`;
 }
@@ -153,28 +158,28 @@ function anual(y) {
       ${F('Ingresos por sueldos', '', an.sueldos.ingresos, an.sueldos.estimado ? 'Incluye sueldos brutos estimados. Compáralo con tu constancia de retenciones.' : 'Compáralo con tu constancia de retenciones o tus CFDI de nómina.')}
       ${F('ISR retenido por tu patrón', '', an.sueldos.isrRetenido)}
       <p class="tabn">Deducciones personales</p>
-      ${F('Médicas, dentales, hospital y seguro', '', ded.general, `Tope: el menor entre 5 UMA anuales y 15% de tus ingresos = ${money(ded.limGeneral)}.`)}
-      ${ded.afore ? F('Aportaciones voluntarias al retiro', '', ded.afore, `Tope propio: ${money(ded.limAfore)}.`) : ''}
-      ${ded.donativos ? F('Donativos', '', ded.donativos, `Tope: 7% de tus ingresos = ${money(ded.limDonativos)}.`) : ''}
-      ${ded.colegiaturas ? F('Colegiaturas (estímulo)', '', ded.colegiaturas, `Tope por alumno y nivel; se aplica el de bachillerato (${money(ded.topeColegiatura)}). Confirma el nivel.`) : ''}
+      ${F('Médicas, dentales, hospital y seguro', '', ded.general, `Tope: el menor entre ${p.deducciones.umasAnuales} UMA anuales y ${pct(p.deducciones.porcentajeIngresos)} de tus ingresos = ${money(ded.limGeneral)}.`, false, ['deducciones', y])}
+      ${ded.afore ? F('Aportaciones voluntarias al retiro', '', ded.afore, `Tope propio: ${money(ded.limAfore)}.`, false, ['deducciones.afore', y]) : ''}
+      ${ded.donativos ? F('Donativos', '', ded.donativos, `Tope: ${pct(p.deducciones.donativos.porcentajeIngresos)} de tus ingresos = ${money(ded.limDonativos)}.`, false, ['deducciones.donativos', y]) : ''}
+      ${ded.colegiaturas ? F('Colegiaturas (estímulo)', '', ded.colegiaturas, `Tope por alumno y nivel; se aplica el de bachillerato (${money(ded.topeColegiatura)}). Confirma el nivel.`, false, ['deducciones.colegiaturas', y]) : ''}
       ${F('Deducciones aplicables', '(=)', ded.total, `${ded.deducibles.length} de ${ded.lista.length} gastos cumplen requisitos (CFDI y pago bancario).`, true)}
       <p class="tabn">Cálculo</p>
       ${F('Base gravable', '(=)', an.base, 'Ingresos menos deducciones.')}
-      ${F('ISR del ejercicio (tarifa art. 152)', '', an.isrAnual)}
+      ${F('ISR del ejercicio (tarifa art. 152)', '', an.isrAnual, '', false, ['tarifaAnual', y])}
       ${F('ISR retenido', '(−)', an.sueldos.isrRetenido)}
       ${F(an.aFavor ? 'Saldo a favor' : 'ISR a cargo', '(=)', an.aFavor || an.aCargo, an.ahorroPorDeducciones ? `Tus deducciones te ahorran ${money(an.ahorroPorDeducciones)} de ISR.` : '', true)}
     </div>
     <div class="notice ${an.obligado ? 'warn' : ''}">${icon(an.obligado ? 'alert' : 'info')}<span>${an.obligado
-      ? `<b>Estás obligado a presentar la anual ${y}.</b>${an.sueldos.ingresos > p.obligacionAnualSueldos ? 'Tus sueldos pasan de $400,000.' : 'Además de sueldos, tuviste ingresos de otro régimen.'}`
-      : `<b>Quizá no estés obligado</b> (sueldos de un solo patrón por menos de $400,000), pero ${an.aFavor ? 'te conviene presentarla para recuperar tu saldo a favor.' : 'revísalo con tu constancia.'}`}</span></div>`;
+      ? `<b>Estás obligado a presentar la anual ${y}.</b>${an.sueldos.ingresos > p.obligacionAnualSueldos ? `Tus sueldos pasan de ${money(p.obligacionAnualSueldos)}.` : 'Además de sueldos, tuviste ingresos de otro régimen.'}`
+      : `<b>Quizá no estés obligado</b> (sueldos de un solo patrón por menos de ${money(p.obligacionAnualSueldos)}), pero ${an.aFavor ? 'te conviene presentarla para recuperar tu saldo a favor.' : 'revísalo con tu constancia.'}`}</span></div>`;
   }
   if (an.tieneResico) {
     h += `<div class="sat"><h3>RESICO ${y} (informativo)</h3>
-      ${F('Ingresos RESICO del año', '', an.resico.ingresos, `Límite del régimen: ${money(an.resico.limite)}.`)}
+      ${F('Ingresos RESICO del año', '', an.resico.ingresos, `Límite del régimen: ${money(an.resico.limite)}.`, false, ['resico.limiteAnual', y])}
       ${F('ISR de tus pagos mensuales', '', an.resico.isrPagos, `${an.resico.meses} mes(es) con declaración.`)}
     </div>
     <div class="notice">${icon('info')}<span>${an.soloResico
-      ? 'Si presentaste todas tus declaraciones mensuales, la regla 3.13.7 de la RMF 2026 te releva de la anual por RESICO. Puedes presentarla de forma opcional para aplicar deducciones personales (reglas 3.13.20 y 3.13.21): consúltalo con un contador.'
+      ? `Si presentaste todas tus declaraciones mensuales, la regla 3.13.7 de la ${esc(reglas(y).p.publicaciones?.rmf ?? 'RMF')} te releva de la anual por RESICO. Puedes presentarla de forma opcional para aplicar deducciones personales (reglas 3.13.20 y 3.13.21): consúltalo con un contador.`
       : 'Tus ingresos RESICO se informan, pero no se suman a la base de tus sueldos: sus pagos mensuales son definitivos.'}</span></div>`;
   }
   if (an.regimenesSinCalculo.length) h += `<div class="notice warn">${icon('clock')}<span>El cálculo de ${esc(an.regimenesSinCalculo.map((r) => REGIMENES[r].corto).join(', '))} llega en una fase posterior. Sus movimientos ya se guardan.</span></div>`;
@@ -201,10 +206,11 @@ export function render(main) {
       ${tab !== 'anual' ? `<label class="field inline"><span>Periodo</span><select id="selMes">${meses.map((x) => `<option value="${x.clave}" ${x.clave === mesSel ? 'selected' : ''}>${esc(nombreMes(x.clave))}${x.estado === 'pagada' ? ' · pagada' : ''}</option>`).join('')}</select></label>`
         : `<label class="field inline"><span>Ejercicio</span><select id="selAnio">${anios.map((y) => `<option ${y === anioSel ? 'selected' : ''}>${y}</option>`).join('')}</select></label>`}
     </div>` : `<div class="empty card">${icon('file')}<p>Tu perfil no tiene un régimen con declaraciones. Agrégalo en Ajustes.</p><a class="btn" href="#/ajustes">Ir a Ajustes</a></div>`}
+    ${avisoProvisional(tab === 'anual' ? anioSel : +(mesSel ?? foto.hoy).slice(0, 4))}
     ${tab === 'isr' && m ? isr(m) + estadoMes(m) : ''}
     ${tab === 'iva' && m ? iva(m) + estadoMes(m) : ''}
     ${tab === 'anual' ? anual(anioSel) : ''}
-    <p class="disclaimer">Cálculos estimados con reglas fiscales 2026. Confírmalos con el SAT o con un contador antes de declarar.</p>
+    <p class="disclaimer">Cálculos estimados con ${esc(leyenda(tab === 'anual' ? anioSel : +(mesSel ?? foto.hoy).slice(0, 4)))}. Confírmalos con el SAT o con un contador antes de declarar. <a href="#/reglas">Ver reglas fiscales</a></p>
   </section>`;
 
   main.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { tab = b.dataset.tab; render(main); }));

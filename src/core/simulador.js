@@ -8,7 +8,7 @@ import { factorCobro } from './desglose.js';
  * @param {object} o { subtotal, pagador: 'pf'|'pm'|'publico', tasaIva, yaCobradoMes, isrRetMes, anio }
  * yaCobradoMes: subtotal de lo cobrado en el mes, porque la tasa se aplica a todo el mes.
  */
-export function cobroResico({ subtotal, pagador = 'pf', tasaIva = 0.16, yaCobradoMes = 0, isrRetMes = 0, anio = 2026 }) {
+export function cobroResico({ subtotal, pagador = 'pf', tasaIva = 0.16, yaCobradoMes = 0, isrRetMes = 0, anio = new Date().getFullYear() }) {
   const p = params(anio);
   const S = Math.max(0, Number(subtotal) || 0);
   const iva = r2(S * tasaIva);
@@ -36,7 +36,7 @@ export function cobroResico({ subtotal, pagador = 'pf', tasaIva = 0.16, yaCobrad
  * Compara, para un ingreso mensual sin IVA, cuánto te queda en cada régimen.
  * @param {object} o { ingreso, gastos (mensuales deducibles de tu actividad, sin IVA), pagador, anio }
  */
-export function compararRegimenes({ ingreso, gastos = 0, pagador = 'pf', anio = 2026 }) {
+export function compararRegimenes({ ingreso, gastos = 0, pagador = 'pf', anio = new Date().getFullYear() }) {
   const p = params(anio);
   const S = Math.max(0, Number(ingreso) || 0);
   const G = Math.max(0, Math.min(Number(gastos) || 0, S));

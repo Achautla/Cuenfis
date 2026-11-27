@@ -3,6 +3,7 @@ import { TIPOS_CUENTA } from '../data/catalogo.js';
 import { vigenteEnRango } from '../core/regimen.js';
 import { icon } from '../ui/icons.js';
 import { esc, money, nombreMes, countTo, $ } from '../ui/dom.js';
+import { leyenda } from '../ui/fuente.js';
 import '../styles/views/balance.css';
 
 export function render(main) {
@@ -58,7 +59,7 @@ export function render(main) {
       </tbody></table></div></div>` : ''}
 
     ${an && (an.aCargo || an.aFavor) ? `<div class="notice ${an.aCargo ? 'warn' : ''}">${icon(an.aCargo ? 'alert' : 'info')}<span><b>Anual ${an.anio} de sueldos: ${an.aCargo ? `a cargo estimado ${money(an.aCargo)}` : `saldo a favor estimado ${money(an.aFavor)}`}.</b>No se suma a "Debo" hasta que presentes la anual en abril. Revísala en Mi declaración.</span></div>` : ''}
-    <p class="disclaimer">Cálculos estimados con reglas fiscales 2026. No sustituyen la asesoría de un contador.</p>
+    <p class="disclaimer">Cálculos estimados con ${esc(leyenda(+getFoto().hoy.slice(0, 4)))}. No sustituyen la asesoría de un contador.</p>
   </section>`;
   const el = $('#balDisp', main); el.dataset.v = 0; countTo(el, b.disponible);
 }

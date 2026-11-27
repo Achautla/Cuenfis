@@ -11,6 +11,8 @@ const KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const META = 'cuenfis:nube';
 
 export const disponible = !!(URL && KEY);
+export const URL_SB = URL;
+export const KEY_SB = KEY;
 export const sb = disponible ? createClient(URL, KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'cuenfis:auth', detectSessionInUrl: true } }) : null;
 
 let usuario = null;
@@ -179,3 +181,17 @@ export async function eliminarCuenta() {
 }
 
 export { mensaje, fijar as fijarSync };
+
+/* ---------- Asistente con IA ---------- */
+
+/** Registra el consentimiento expreso para usar el asistente (se pide aparte del aviso general). */
+export async function consentirAsistente(version) {
+  const { error } = await sb.from('consentimientos').upsert([{ documento: 'asistente_ia', version }], { onConflict: 'user_id,documento,version', ignoreDuplicates: true });
+  if (error) throw new Error(mensaje(error));
+}
+
+/** Retira el consentimiento del asistente: el servidor deja de atender peticiones de esta cuenta. */
+export async function retirarAsistente() {
+  const { error } = await sb.from('consentimientos').delete().eq('documento', 'asistente_ia');
+  if (error) throw new Error(mensaje(error));
+}

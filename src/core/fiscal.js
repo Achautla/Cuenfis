@@ -1,14 +1,9 @@
 // Funciones fiscales puras: tarifas, tasas y subsidio. Sin estado ni DOM.
-import P2026 from './params/2026.js';
+import { reglas } from './reglas.js';
 
-const PARAMS = { 2026: P2026 };
-
-/** Parámetros del año (si no hay del año pedido, usa el más reciente anterior). */
+/** Parámetros del año (si aún no hay del año pedido, usa los del último año anterior: ver reglas.js). */
 export function params(anio) {
-  if (PARAMS[anio]) return PARAMS[anio];
-  const anios = Object.keys(PARAMS).map(Number).sort((a, b) => a - b);
-  const prev = anios.filter((a) => a <= anio).pop() ?? anios[0];
-  return PARAMS[prev];
+  return reglas(anio).p;
 }
 
 export const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
@@ -30,7 +25,7 @@ export function isrTarifa(base, tarifa) {
   return r2(cuota + (base - inf) * pct);
 }
 
-/** Subsidio para el empleo mensual (decreto 2026): monto fijo si el ingreso no pasa el límite. */
+/** Subsidio para el empleo mensual (decreto del año): monto fijo si el ingreso no pasa el límite. */
 export function subsidioEmpleoMensual(ingresoMensual, p) {
   const s = p.subsidioEmpleo;
   if (!s || ingresoMensual > s.limiteIngresoMensual) return 0;

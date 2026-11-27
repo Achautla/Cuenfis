@@ -6,6 +6,7 @@ import { icon } from '../ui/icons.js';
 import { esc, money, pct, Mes } from '../ui/dom.js';
 import { filtroHTML, rango, enlazar } from './filtro-periodo.js';
 import { chipsFiscales } from './comun.js';
+import { leyenda } from '../ui/fuente.js';
 import '../styles/views/indicadores.css';
 
 function barras(porMes) {
@@ -68,7 +69,7 @@ export function render(main) {
         <td class="n num">${money(m.propio)}</td><td class="n num">${money(m.delSat)}</td><td class="n num">${money(m.gastoReal)}</td></tr>`).join('')}</tbody>
       <tfoot><tr><th colspan="7">Totales</th><th class="n num">${money(per.propios)}</th><th class="n num">${money(per.delSat)}</th><th class="n num">${money(per.gastos)}</th></tr></tfoot></table></div>
     </div>
-    <p class="disclaimer">Cálculos estimados con reglas fiscales 2026. No sustituyen la asesoría de un contador.</p>
+    <p class="disclaimer">Cálculos estimados con ${esc(leyenda(+getFoto().hoy.slice(0, 4)))}. No sustituyen la asesoría de un contador.</p>
   </section>`;
   enlazar(main, 'ind', () => render(main));
 }

@@ -62,3 +62,11 @@
 .pres-mini li.aviso i { background: var(--warn); }
 .pres-mini li.excedido i { background: var(--out); }
 @media (max-width: 480px) { .pres-mini li { grid-template-columns: minmax(0, 1fr) auto; } .pm-track { grid-column: 1 / -1; grid-row: 2; } }
+
+/* Pregunta rápida al asistente */
+.ia-rapida { display: flex; align-items: center; gap: 8px; padding: 6px 6px 6px 12px; margin-bottom: 16px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); }
+.ia-rapida:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.ia-rapida-ico { flex: none; color: var(--sat); display: grid; place-items: center; }
+.ia-rapida-ico svg { width: 20px; height: 20px; }
+.ia-rapida input, .ia-rapida input:focus { flex: 1; min-width: 0; border: 0; outline: 0; box-shadow: none; background: transparent; font: inherit; font-size: 16px; color: var(--ink); padding: 8px 4px; }
+.ia-rapida .btn { flex: none; }

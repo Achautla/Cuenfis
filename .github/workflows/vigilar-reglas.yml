@@ -1,0 +1,23 @@
+name: Vigilar reglas fiscales
+# Revisa el DOF y abre un aviso si se publica algo que puede cambiar las reglas fiscales de Cuenfis.
+# Cada semana, y a diario de diciembre a febrero (cuando salen la RMF, el Anexo 8 y la UMA).
+on:
+  schedule:
+    - cron: '0 15 * * 1'
+    - cron: '0 15 * 12,1,2 *'
+  workflow_dispatch:
+    inputs:
+      dias: { description: 'Días hacia atrás', default: '7' }
+permissions:
+  contents: read
+  issues: write
+jobs:
+  vigilar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: node scripts/vigilar-dof.mjs ${{ github.event.inputs.dias || '7' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

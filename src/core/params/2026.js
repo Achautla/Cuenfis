@@ -1,10 +1,16 @@
-// Parámetros fiscales 2026. Se actualizan cada enero sin tocar la lógica.
-// Fuentes: LISR arts. 96, 113-E a 113-J, 151, 152; LIVA arts. 1-A y 5;
-// Anexo 8 RMF 2026 (DOF 28-dic-2025); UMA INEGI 2026; Decreto subsidio para el empleo (DOF 31-dic-2025).
+// Parámetros fiscales 2026. Se actualizan cada año sin tocar la lógica (ver src/core/reglas.js).
+// La fuente de cada dato está en `publicaciones` y en src/core/params/fuentes.js.
 // Estimaciones: no sustituyen la asesoría de un contador.
 
 export default {
   anio: 2026,
+  revision: 1, // sube cuando se corrige o se publica una versión remota
+  publicaciones: {
+    rmf: 'Resolución Miscelánea Fiscal para 2026',
+    anexo8: 'Anexo 8 de la RMF 2026 (DOF 28-dic-2025)',
+    uma: 'UMA 2026 publicada por el INEGI en el DOF (vigente desde el 1 de febrero de 2026)',
+    subsidio: 'Decreto del subsidio para el empleo (DOF 31-dic-2025)',
+  },
   uma: { diaria: 117.31 },
 
   // RESICO personas físicas (art. 113-E): la tasa se aplica a TODO el ingreso del mes.
@@ -32,6 +38,10 @@ export default {
   deducciones: {
     umasAnuales: 5,
     porcentajeIngresos: 0.15, // art. 151 último párrafo
+    afore: { porcentajeIngresos: 0.10, umasAnuales: 5 }, // art. 151 fr. V
+    donativos: { porcentajeIngresos: 0.07 }, // art. 151 fr. III
+    // Estímulo por colegiaturas: tope anual por alumno y nivel (Decreto DOF 26-dic-2013, art. 1.8)
+    colegiaturas: { preescolar: 14_200, primaria: 12_900, secundaria: 19_900, profesionalTecnico: 17_100, bachillerato: 24_500 },
   },
 
   subsidioEmpleo: {

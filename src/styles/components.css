@@ -157,3 +157,17 @@ dialog.conf { width: min(420px, calc(100vw - 32px)); max-width: 420px; margin: a
 .btn.danger-solid:hover { filter: brightness(.95); background: var(--out); }
 @media (max-width: 899px) { dialog.conf { width: calc(100vw - 32px); max-width: calc(100vw - 32px); margin: auto; border-radius: var(--r-lg); } }
 .link-btn { background: none; border: 0; color: var(--accent); font: inherit; font-size: 14px; cursor: pointer; padding: 6px 0; justify-self: start; text-decoration: underline; text-underline-offset: 3px; }
+
+/* "¿De dónde sale?" junto a una cifra fiscal */
+.fuente-chip { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--accent); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; min-height: 28px; }
+.fuente-chip svg { width: 13px; height: 13px; }
+.fuente-chip:hover { border-color: var(--accent); }
+.fuente-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+small + .fuente-chip { display: flex; width: fit-content; }
+.fuente-dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; margin: 0 0 10px; text-align: left; }
+.fuente-dl dt { color: var(--ink-3); font-size: 13px; }
+.fuente-dl dd { margin: 0; font-size: 14px; }
+.fuente-prov { display: flex; gap: 6px; align-items: flex-start; color: var(--warn); background: var(--warn-soft); padding: 8px 10px; border-radius: 8px; text-align: left; }
+.fuente-prov svg { width: 16px; height: 16px; flex: none; margin-top: 2px; }
+.fuente-dlg .conf-foot { flex-wrap: wrap; }
+.fuente-dlg a.btn { text-decoration: none; }

@@ -36,6 +36,7 @@
     "@fontsource/inter": "^5.1.0",
     "@fontsource/inter-tight": "^5.1.0",
     "@supabase/supabase-js": "^2.119.2",
+    "jsqr": "^1.4.0",
     "write-excel-file": "^4.1.1"
   }
 }

@@ -6,6 +6,7 @@ import { ym } from '../core/motor.js';
 import { PAGADORES } from '../data/catalogo.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, money, pct, nombreMes } from '../ui/dom.js';
+import { leyenda, chipFuente } from '../ui/fuente.js';
 import '../styles/views/simulador.css';
 
 // Estado de la pantalla (se conserva al cambiar de sección)
@@ -42,6 +43,7 @@ function cobro(foto) {
       </div>
       ${r.cambiaTasa ? `<div class="notice warn" style="margin-top:12px">${icon('alert')}<span>Este cobro sube tu tasa del mes a ${pct(r.tasa, 1)}. El aumento aplica a todo lo cobrado en el mes y ya está incluido arriba.</span></div>` : ''}
       <p class="small muted" style="margin-top:10px">Si gastas en tu actividad con factura, el IVA de esos gastos baja lo que apartas.</p>
+      <div class="row">${chipFuente('resico.mensual', +foto.hoy.slice(0, 4))}${st.pagador === 'pm' ? chipFuente('resico.retencionIsrPM', +foto.hoy.slice(0, 4)) : ''}</div>
     </div></div>`;
 }
 
@@ -61,7 +63,8 @@ function sueldo(foto) {
         ${L('ISR que te retienen', '−' + money(isr), 'sat')}
         ${L('Neto antes de IMSS', money(st.sueldo - isr), 'mine')}
       </div>
-      <p class="small muted" style="margin-top:10px">Falta restar la cuota del IMSS y otros descuentos de tu nómina (fondo de ahorro, préstamos).</p></div></div>`;
+      <p class="small muted" style="margin-top:10px">Falta restar la cuota del IMSS y otros descuentos de tu nómina (fondo de ahorro, préstamos).</p>
+      <div class="row">${chipFuente('tarifaMensual', +foto.hoy.slice(0, 4))}${sub ? chipFuente('subsidioEmpleo', +foto.hoy.slice(0, 4)) : ''}</div></div></div>`;
 }
 
 function comparar() {
@@ -91,7 +94,7 @@ export function render(main) {
     <div class="page-head"><div><h1>Simulador</h1><p class="sub">Haz cuentas antes de cobrar o de cambiar de régimen.</p></div></div>
     <div class="seg" role="group" aria-label="Simulación">${tabs.map(([k, t]) => `<button data-tab="${k}" aria-pressed="${st.tab === k}">${t}</button>`).join('')}</div>
     <div id="simBody">${st.tab === 'cobro' ? cobro(foto) : st.tab === 'sueldo' ? sueldo(foto) : comparar()}</div>
-    <p class="disclaimer">Estimaciones con reglas fiscales 2026. No sustituyen la asesoría de un contador.</p>
+    <p class="disclaimer">Estimaciones con ${esc(leyenda(+getFoto().hoy.slice(0, 4)))}. No sustituyen la asesoría de un contador.</p>
   </section>`;
 
   main.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { st.tab = b.dataset.tab; render(main); }));
