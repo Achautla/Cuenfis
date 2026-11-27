@@ -51,7 +51,8 @@ export const AVISO_PRIVACIDAD = [
   ['Permisos del dispositivo', L([
     '<b>Notificaciones (opcional):</b> solo si las activas en <i>Avisos</i>, para recordarte fechas límite. Puedes desactivarlas en cualquier momento.',
     '<b>Archivos:</b> la app solo lee los archivos que tú eliges (un acuse o un respaldo) y solo guarda los que tú descargas.',
-    'No usamos tu ubicación, cámara, micrófono, contactos ni identificadores de publicidad.',
+    '<b>Cámara y fotos (opcional):</b> solo cuando tú tomas o eliges la foto de un ticket o factura. La foto se guarda únicamente en tu dispositivo, nunca en la nube. Si el asistente con IA está activo y la foto no trae el QR de una factura, se envía una versión reducida para leer el ticket y no se conserva en el servidor.',
+    'No usamos tu ubicación, micrófono, contactos ni identificadores de publicidad.',
   ])],
   ['Menores de edad', P('Cuenfis está dirigida a personas mayores de 18 años. No recabamos a sabiendas datos de menores; si detectamos una cuenta de un menor, la eliminaremos.')],
   ['Seguridad y conservación', P('Cada usuario solo puede leer y escribir su propia información (seguridad a nivel de fila en la base de datos), la conexión va cifrada y los acuses se guardan en un espacio privado. Conservamos tus datos mientras tengas cuenta; al eliminarla se borran, salvo lo que una ley nos obligue a conservar.')],

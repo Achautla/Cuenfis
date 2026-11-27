@@ -4,12 +4,18 @@ import * as nube from '../data/nube.js';
 import { ejecutar, contexto } from './herramientas.js';
 import { responderDemo } from './demo.js';
 import { sincronizarConsentimiento } from './consentimiento.js';
+import { leerQrCfdi, ligaVerificacion } from './cfdi.js';
+import { guardarFoto, limpiarHuerfanas } from '../data/fotos.js';
+import { getEstado } from '../data/store.js';
+import { money } from '../ui/dom.js';
 
 const CLAVE = 'cuenfis:asistente';
 const MAX_API = 30; // mensajes que se mandan al servidor (los más recientes)
 const MAX_VUELTAS = 6; // herramientas encadenadas por pregunta
 
 let st = cargar();
+let fotoPendiente = null; // foto sin QR que espera los datos del usuario
+let fotoActual = null; // id de la foto en curso: el movimiento que se guarde llevará ese mismo id
 const subs = new Set();
 export const alCambiar = (fn) => (subs.add(fn), () => subs.delete(fn));
 const avisar = () => { guardar(); subs.forEach((f) => f(st)); };
@@ -25,7 +31,13 @@ function guardar() {
 
 export const estado = () => st;
 export function fijarModo(modo) { st = { ...st, modo }; avisar(); }
-export function borrar() { st = { ...vacio(), uso: st.uso, modo: st.modo }; avisar(); }
+export function borrar() { st = { ...vacio(), uso: st.uso, modo: st.modo }; avisar(); limpiarFotos(); }
+
+/** Fotos que siguen en uso: las de movimientos guardados y las de propuestas aún pendientes. */
+export function limpiarFotos() {
+  const pendientes = st.vista.filter((x) => x.foto || (x.rol === 'propuesta' && x.estado === 'pendiente')).map((x) => x.foto ?? x.id).filter(Boolean);
+  return limpiarHuerfanas(getEstado().movimientos.map((m) => m.id), pendientes).catch(() => {});
+}
 export function marcarPropuesta(i, cambios) { st.vista[i] = { ...st.vista[i], ...cambios }; avisar(); }
 
 const agregar = (x) => { st = { ...st, vista: [...st.vista, x] }; avisar(); };
@@ -33,7 +45,7 @@ const agregar = (x) => { st = { ...st, vista: [...st.vista, x] }; avisar(); };
 function alEvento(e) {
   if (e.t === 'herramienta') agregar({ rol: 'herramienta', nombre: e.nombre });
   else if (e.t === 'texto' && e.md.trim()) agregar({ rol: 'asistente', md: e.md });
-  else if (e.t === 'propuesta') agregar({ rol: 'propuesta', datos: e.datos, estado: 'pendiente' });
+  else if (e.t === 'propuesta') agregar({ rol: 'propuesta', datos: e.datos, estado: 'pendiente', ...(fotoActual || fotoPendiente ? { id: fotoActual || fotoPendiente } : {}) }), (fotoPendiente = null);
   else if (e.t === 'uso') st = { ...st, uso: e.uso };
 }
 
@@ -61,8 +73,8 @@ async function llamar(cuerpo) {
 }
 
 /** Pregunta real: manda la conversación, ejecuta aquí las herramientas que pida y repite hasta terminar. */
-async function preguntarReal(texto) {
-  let api = [...st.api, { role: 'user', content: texto }];
+async function preguntarReal(texto, contenido = texto) {
+  let api = [...st.api, { role: 'user', content: contenido }];
   for (let i = 0; i < MAX_VUELTAS; i++) {
     const enviar = api.slice(-MAX_API);
     while (enviar.length && enviar[0].role !== 'user') enviar.shift(); // debe empezar con el usuario
@@ -81,7 +93,9 @@ async function preguntarReal(texto) {
     }
     api = [...api, { role: 'user', content: resultados }];
   }
-  st = { ...st, api };
+  // La foto solo se manda una vez: en la historia queda una nota para no pagarla en cada pregunta
+  st = { ...st, api: api.map((m) => (Array.isArray(m.content) && m.content.some((b) => b.type === 'image')
+    ? { ...m, content: m.content.map((b) => (b.type === 'image' ? { type: 'text', text: '[Foto de ticket enviada antes]' } : b)) } : m)) };
 }
 
 async function demo(texto) {
@@ -92,12 +106,12 @@ async function demo(texto) {
 }
 
 /** Si el servidor no tiene registrado el consentimiento (por ejemplo, se dio sin sesión), lo sube y reintenta una vez. */
-async function conReintento(texto) {
-  try { await preguntarReal(texto); }
+async function conReintento(texto, contenido) {
+  try { await preguntarReal(texto, contenido); }
   catch (e) {
     if (e.codigo !== 'sin_consentimiento') throw e;
     await sincronizarConsentimiento();
-    await preguntarReal(texto);
+    await preguntarReal(texto, contenido);
   }
 }
 
@@ -125,3 +139,55 @@ export async function preguntar(texto) {
 
 /** Al iniciar sesión o activar el servidor, vuelve a intentar con la IA real. */
 export function reintentarReal() { st = { ...st, demo: null }; avisar(); }
+
+/** Propuesta hecha en el dispositivo con el QR de una factura: no usa la IA ni cuenta mensajes. */
+function propuestaCfdi(c) {
+  const rfc = (getEstado().perfil?.rfc ?? '').toUpperCase();
+  const tipo = rfc && c.rfcEmisor === rfc ? 'entrada' : 'salida';
+  const cats = ejecutar('listar_categorias', { tipo }).categorias.map((x) => x.id);
+  const categoria = tipo === 'entrada' ? (cats.find((x) => x === 'cobro_resico') ?? cats[0]) : (cats.includes('otro_gasto') ? 'otro_gasto' : cats.at(-1));
+  return { tipo, monto: c.total, fecha: contexto().hoy, categoria, nota: `Factura de ${tipo === 'entrada' ? c.rfcReceptor || 'cliente' : c.rfcEmisor}`, forma_pago: 'tarjeta', cfdi: true, uuid: c.uuid };
+}
+
+/** Recibe la foto de un ticket o factura: la guarda en el dispositivo, lee el QR y, si hace falta, se la pasa a la IA. */
+export async function enviarFoto(file) {
+  if (st.ocupado || !file) return;
+  st = { ...st, ocupado: true, error: null };
+  avisar();
+  try {
+    const { prepararFoto, aBase64 } = await import('./imagen.js'); // el lector de QR se carga solo cuando hace falta
+    const f = await prepararFoto(file);
+    const id = `ft${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    await guardarFoto(id, f.blob).catch(() => {}); // si el dispositivo no deja guardar, seguimos sin foto
+    fotoActual = id;
+    agregar({ rol: 'usuario', texto: 'Foto de ticket', foto: id });
+    const c = f.qr ? leerQrCfdi(f.qr) : null;
+    if (c) {
+      alEvento({ t: 'herramienta', nombre: 'leer_qr_cfdi' });
+      alEvento({ t: 'texto', md: `Leí el código QR de la factura:\n\n| Dato | Valor |\n| --- | --- |\n| Total | ${money(c.total)} |\n| RFC de quien factura | ${c.rfcEmisor} |\n| Folio fiscal | ${c.uuid.slice(0, 8)}… |\n\nEl QR no trae la fecha ni el concepto: revisa la fecha y la categoría antes de guardar. [Verificar en el SAT](${ligaVerificacion(c)})` });
+      alEvento({ t: 'propuesta', datos: propuestaCfdi(c) });
+    } else if (puedeReal() && st.demo !== true) {
+      const data = await aBase64(f.blob);
+      const pedido = 'Lee este ticket y prepara el movimiento con proponer_movimiento. Si no se lee el total o la fecha, dímelo.';
+      try {
+        await conReintento(pedido, [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } }, { type: 'text', text: pedido }]);
+        st = { ...st, demo: false };
+      } catch (e) {
+        if (e.codigo !== 'no_activo') throw e;
+        st = { ...st, demo: true };
+        sinIaFoto();
+      }
+    } else sinIaFoto();
+  } catch (e) {
+    st = { ...st, error: e.message, ...(e.uso ? { uso: e.uso } : {}) };
+  } finally {
+    fotoActual = null;
+    st = { ...st, ocupado: false };
+    avisar();
+  }
+}
+
+function sinIaFoto() {
+  fotoPendiente = fotoActual;
+  alEvento({ t: 'texto', md: 'Guardé la foto en tu dispositivo, pero no encontré el código QR de una factura. **En modo demostración no leo tickets sin QR**: con la IA activa leeré el total, la fecha y el comercio y te prepararé el movimiento.\n\nMientras tanto, dime el monto y en qué fue (por ejemplo, "pagué 230 en el súper con tarjeta") y te lo preparo con la foto.' });
+}

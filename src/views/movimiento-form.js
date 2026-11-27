@@ -2,6 +2,7 @@
 import { CATEGORIAS, categoria, FORMAS_PAGO, PAGADORES } from '../data/catalogo.js';
 import { categoriasDisponibles } from '../core/regimen.js';
 import { calcular } from '../core/motor.js';
+import { leerFoto, guardarFoto, borrarFoto } from '../data/fotos.js';
 import { agregarMovimiento, editarMovimiento, borrarMovimiento, guardarRecurrente, nuevoId } from '../data/acciones.js';
 import { getEstado, getFoto, aplicar } from '../data/store.js';
 import { icon } from '../ui/icons.js';
@@ -168,7 +169,7 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     if (mov.recurrente) efectos.push('Viene de un recurrente; esa fecha no volverá a pedirse.');
     efectos.push('Se recalculan tus saldos, impuestos y presupuestos.');
     if (!(await confirmar({ titulo: '¿Borrar este movimiento?', accion: 'Borrar movimiento', efectos }))) return;
-    aplicar((s) => borrarMovimiento(s, draft.id)); cerrar(); toast('Movimiento borrado', icon('trash'));
+    aplicar((s) => borrarMovimiento(s, draft.id)); borrarFoto(draft.id); cerrar(); toast('Movimiento borrado', icon('trash'));
   };
   f.addEventListener('change', () => { sucio = true; });
   f.addEventListener('input', (ev) => {
@@ -230,13 +231,30 @@ export function abrirDetalle(id) {
       ${desgloseHTML(m)}
       ${m.d.motivos.map((t) => `<div class="notice warn" style="margin-top:10px">${icon('alert')}<span>${esc(t)}</span></div>`).join('')}
       ${filas ? `<div class="breakdown" style="margin-top:12px">${filas}</div>` : ''}
+      <figure class="mov-foto" id="movFoto" hidden><figcaption class="small muted">Foto del ticket, guardada solo en este dispositivo.</figcaption></figure>
       ${hist ? `<details class="more"><summary>Historial de cambios</summary><ul class="hist">${hist}</ul></details>` : ''}
     </div>
-    <div class="dlg-foot">${m.categoria === 'impuestos' ? '<span class="small muted">Se edita desde Mi declaración.</span>' : `<button class="btn primary" data-edit>${icon('edit')}Editar</button>`}</div>`;
+    <div class="dlg-foot"><label class="btn ghost" id="movFotoBtn">${icon('camera')}<span>Agregar foto</span><input type="file" accept="image/*" capture="environment" hidden /></label><span class="spacer"></span>${m.categoria === 'impuestos' ? '<span class="small muted">Se edita desde Mi declaración.</span>' : `<button class="btn primary" data-edit>${icon('edit')}Editar</button>`}</div>`;
   d.onclick = (ev) => {
     if (ev.target.closest('[data-x]')) { d.onclick = null; cerrar(); }
     if (ev.target.closest('[data-edit]')) { d.onclick = null; abrirFormulario({ mov: getEstado().movimientos.find((x) => x.id === id) }); }
   };
+  const fig = d.querySelector('#movFoto'), btnFoto = d.querySelector('#movFotoBtn');
+  const pintarFoto = async () => {
+    const blob = await leerFoto(id);
+    if (!fig.isConnected) return;
+    fig.querySelector('img')?.remove();
+    fig.hidden = !blob;
+    btnFoto.querySelector('span').textContent = blob ? 'Cambiar foto' : 'Agregar foto';
+    if (blob) { const img = new Image(); img.alt = 'Foto del ticket'; img.src = URL.createObjectURL(blob); img.onload = () => URL.revokeObjectURL(img.src); fig.prepend(img); }
+  };
+  btnFoto.querySelector('input').onchange = async (ev) => {
+    const file = ev.target.files?.[0]; ev.target.value = '';
+    if (!file) return;
+    try { const { prepararFoto } = await import('../ia/imagen.js'); const f = await prepararFoto(file); await guardarFoto(id, f.blob); await pintarFoto(); toast('Foto guardada en este dispositivo', icon('check-circle')); }
+    catch (e) { toast(e.message || 'No se pudo guardar la foto', icon('alert')); }
+  };
+  pintarFoto();
   if (!d.open) d.showModal();
 }
 

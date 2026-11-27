@@ -96,3 +96,16 @@
   .ia-caja { position: sticky; bottom: calc(68px + env(safe-area-inset-bottom)); z-index: 5; box-shadow: 0 -8px 16px var(--bg); }
   .ia-demo span { font-size: 13px; }
 }
+
+/* Fotos de tickets */
+.ia-cam { flex: none; width: 44px; height: 44px; border-radius: 12px; cursor: pointer; color: var(--ink-2); }
+.ia-cam svg { width: 22px; height: 22px; }
+.ia-sug .chip svg { width: 15px; height: 15px; margin-right: 4px; vertical-align: -2px; }
+.ia-foto { margin: 0; border-radius: 16px 16px 4px 16px; overflow: hidden; background: var(--navy); color: #fff; max-width: 220px; }
+.ia-foto img { display: block; width: 100%; max-height: 280px; object-fit: cover; }
+.ia-foto figcaption { display: flex; align-items: center; gap: 6px; padding: 8px 12px; font-size: 13px; }
+.ia-foto figcaption svg { width: 15px; height: 15px; }
+.ia-prop-foto { justify-self: start; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--sat); background: var(--sat-soft); padding: 2px 8px; border-radius: 99px; }
+.ia-prop-foto svg { width: 13px; height: 13px; }
+.mov-foto { margin: 12px 0 0; }
+.mov-foto img { display: block; max-width: 100%; max-height: 360px; border-radius: var(--r-md); border: 1px solid var(--line); }

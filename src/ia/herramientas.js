@@ -112,4 +112,5 @@ export const ETIQUETAS = {
   declaracion_anual: 'Calculando tu declaración anual',
   regla_fiscal: 'Consultando la regla fiscal y su fuente',
   proponer_movimiento: 'Preparando el movimiento',
+  leer_qr_cfdi: 'Leyendo el QR de la factura en tu dispositivo',
 };
