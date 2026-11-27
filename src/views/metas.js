@@ -31,7 +31,7 @@ export function render(main) {
     <div class="card m-sum">
       <div><span>Ahorro de este mes</span><b class="num ${mes.ahorro < 0 ? 'neg' : ''}">${money(mes.ahorro)}</b><small>Lo tuyo menos tus gastos reales</small></div>
       <div><span>Necesitas apartar al mes</span><b class="num">${money(necesario)}</b><small>Para llegar a tiempo a tus metas con fecha</small></div>
-      <form id="fMetaMes"><label class="field"><span>Meta de ahorro mensual</span><input name="metaAhorro" type="number" min="0" step="100" value="${esc(meta || '')}" placeholder="${necesario ? Math.ceil(necesario / 100) * 100 : ''}" /></label></form>
+      <form id="fMetaMes"><label class="field"><span>Meta de ahorro mensual</span><input name="metaAhorro" type="number" min="0" step="0.01" value="${esc(meta || '')}" placeholder="${necesario ? Math.ceil(necesario / 100) * 100 : ''}" /></label></form>
     </div>
     ${necesario && mes.ahorro < necesario && foto.hoy.slice(8) > '20' ? `<div class="notice warn">${icon('alert')}<span><b>Este mes vas ${money(necesario - Math.max(0, mes.ahorro))} abajo de lo que piden tus metas.</b>Revisa tus presupuestos o mueve la fecha de alguna meta.</span></div>` : ''}
 
@@ -54,7 +54,7 @@ export function render(main) {
       <div class="m-form">
         <label class="field"><span>Nombre</span><input name="nombre" required maxlength="50" value="${esc(e?.nombre ?? '')}" placeholder="Viaje a Oaxaca" /></label>
         <label class="field"><span>Tipo</span><select name="tipo">${Object.entries(TIPOS).map(([k, t]) => `<option value="${k}" ${e?.tipo === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label>
-        <label class="field"><span>Cuánto necesitas</span><input name="objetivo" type="number" min="1" step="100" required value="${esc(e?.objetivo ?? '')}" /></label>
+        <label class="field"><span>Cuánto necesitas</span><input name="objetivo" type="number" min="1" step="0.01" required value="${esc(e?.objetivo ?? '')}" /></label>
         <label class="field"><span>Para cuándo (opcional)</span><input name="fecha" type="date" min="${foto.hoy}" value="${esc(e?.fecha ?? '')}" /></label>
         <label class="field"><span>¿Dónde lo guardas?</span><select name="cuenta"><option value="">Lo registro a mano</option>${ahorro.map((c) => `<option value="${esc(c.id)}" ${e?.cuenta === c.id ? 'selected' : ''}>${esc(c.nombre)} (${money(c.saldo)})</option>`).join('')}</select>
           <span class="hint">${ahorro.length ? 'Si la ligas a una cuenta de ahorro, avanza sola con su saldo.' : 'Agrega una cuenta de ahorro en Ajustes para que avance sola.'}</span></label>

@@ -20,7 +20,7 @@ function cobro(foto) {
     yaCobradoMes: st.sumarMes ? mes?.total ?? 0 : 0, isrRetMes: st.sumarMes ? mes?.isrRet ?? 0 : 0, anio: +k.slice(0, 4) });
   return `<div class="sim-grid">
     <form class="card sim-in" id="fCobro">
-      <label class="field"><span>¿Cuánto vas a cobrar, sin IVA?</span><div class="amount-wrap"><span>$</span><input id="simMonto" name="monto" type="number" min="0" step="100" inputmode="decimal" value="${st.monto}" /></div></label>
+      <label class="field"><span>¿Cuánto vas a cobrar, sin IVA?</span><div class="amount-wrap"><span>$</span><input id="simMonto" name="monto" type="number" min="0" step="0.01" inputmode="decimal" value="${st.monto}" /></div></label>
       <p class="field-label">¿Quién te va a pagar?</p>
       <div class="seg full" id="simPag">${Object.entries(PAGADORES).map(([k2, t]) => `<button type="button" data-p="${k2}" aria-pressed="${st.pagador === k2}">${t}</button>`).join('')}</div>
       <label class="check" style="margin-top:14px"><input type="checkbox" id="simMes" ${st.sumarMes ? 'checked' : ''} /><span>Sumar lo que ya cobré en ${esc(nombreMes(k).toLowerCase())}<small>${mes?.total ? `Llevas ${money(mes.total)} sin IVA. La tasa RESICO se aplica a todo el mes.` : 'Aún no registras cobros este mes.'}</small></span></label>
@@ -51,7 +51,7 @@ function sueldo(foto) {
   const sub = subsidioEmpleoMensual(st.sueldo, p);
   const isrTar = isrTarifa(st.sueldo, p.tarifaMensual);
   return `<div class="sim-grid">
-    <form class="card sim-in"><label class="field"><span>Sueldo bruto mensual</span><div class="amount-wrap"><span>$</span><input id="simSueldo" type="number" min="0" step="500" inputmode="decimal" value="${st.sueldo}" /></div>
+    <form class="card sim-in"><label class="field"><span>Sueldo bruto mensual</span><div class="amount-wrap"><span>$</span><input id="simSueldo" type="number" min="0" step="0.01" inputmode="decimal" value="${st.sueldo}" /></div>
       <span class="hint">El que aparece en tu contrato o recibo, antes de descuentos.</span></label></form>
     <div class="card sim-out"><p class="k-lbl">Te llega aproximadamente</p><p class="sim-big num">${money(st.sueldo - isr)}</p>
       <div class="breakdown" style="margin-top:14px">
@@ -69,8 +69,8 @@ function comparar() {
   const max = Math.max(1, ...c.filas.map((f) => f.teQueda));
   return `<div class="sim-grid">
     <form class="card sim-in">
-      <label class="field"><span>Ingreso mensual, sin IVA</span><div class="amount-wrap"><span>$</span><input id="cmpIng" type="number" min="0" step="1000" inputmode="decimal" value="${st.ingreso}" /></div></label>
-      <label class="field"><span>Gastos mensuales de tu actividad con factura, sin IVA</span><input id="cmpGas" type="number" min="0" step="500" inputmode="decimal" value="${st.gastos}" /><span class="hint">Equipo, software, renta de oficina. No incluyas gastos personales.</span></label>
+      <label class="field"><span>Ingreso mensual, sin IVA</span><div class="amount-wrap"><span>$</span><input id="cmpIng" type="number" min="0" step="0.01" inputmode="decimal" value="${st.ingreso}" /></div></label>
+      <label class="field"><span>Gastos mensuales de tu actividad con factura, sin IVA</span><input id="cmpGas" type="number" min="0" step="0.01" inputmode="decimal" value="${st.gastos}" /><span class="hint">Equipo, software, renta de oficina. No incluyas gastos personales.</span></label>
     </form>
     <div class="card sim-out"><p class="k-lbl">¿Dónde te queda más?</p>
       <ul class="cmp">${c.filas.map((f) => `<li class="${f.clave === c.mejor ? 'best' : ''} ${f.disponible ? '' : 'off'}">

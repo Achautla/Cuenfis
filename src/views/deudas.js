@@ -30,10 +30,10 @@ function tarjeta(foto, c) {
     : `<div class="notice">${icon('info')}<span><b>Captura tu día de corte.</b>Con él calculamos cuánto pagar para no generar intereses y cuándo vence.</span></div>`}
     <details class="more" ${t.configurada ? '' : 'open'}><summary>Datos de la tarjeta</summary>
       <form class="d-form cols-4" data-form="${esc(c.id)}">
-        <label class="field"><span>Límite de crédito</span><input name="limite" type="number" min="0" step="100" value="${esc(c.limite ?? '')}" /></label>
+        <label class="field"><span>Límite de crédito</span><input name="limite" type="number" min="0" step="0.01" value="${esc(c.limite ?? '')}" /></label>
         <label class="field"><span>Día de corte</span><input name="diaCorte" type="number" min="1" max="31" value="${esc(c.diaCorte ?? '')}" /></label>
         <label class="field"><span>Día límite de pago</span><input name="diaPago" type="number" min="1" max="31" value="${esc(c.diaPago ?? '')}" /><span class="hint">Vacío: 20 días después del corte</span></label>
-        <label class="field"><span>Tasa anual (%)</span><input name="tasa" type="number" min="0" max="200" step="0.1" value="${esc(c.tasaAnual != null ? +(c.tasaAnual * 100).toFixed(2) : '')}" /><span class="hint">Viene en tu estado de cuenta</span></label>
+        <label class="field"><span>Tasa anual (%)</span><input name="tasa" type="number" min="0" max="200" step="0.01" value="${esc(c.tasaAnual != null ? +(c.tasaAnual * 100).toFixed(2) : '')}" /><span class="hint">Viene en tu estado de cuenta</span></label>
         <button class="btn">${icon('check')}Guardar datos</button>
       </form></details>
   </article>`;
@@ -51,8 +51,8 @@ function prestamo(c) {
       : `<div class="notice">${icon('info')}<span>Captura tu pago mensual y la tasa para saber en cuánto tiempo terminas y cuánto pagas de intereses.</span></div>`}
     <details class="more" ${p.configurado ? '' : 'open'}><summary>Datos del préstamo</summary>
       <form class="d-form cols-4" data-form="${esc(c.id)}">
-        <label class="field"><span>Pago mensual</span><input name="pagoMensual" type="number" min="0" step="10" value="${esc(c.pagoMensual ?? '')}" /></label>
-        <label class="field"><span>Tasa anual (%)</span><input name="tasa" type="number" min="0" max="200" step="0.1" value="${esc(c.tasaAnual != null ? +(c.tasaAnual * 100).toFixed(2) : '')}" /></label>
+        <label class="field"><span>Pago mensual</span><input name="pagoMensual" type="number" min="0" step="0.01" value="${esc(c.pagoMensual ?? '')}" /></label>
+        <label class="field"><span>Tasa anual (%)</span><input name="tasa" type="number" min="0" max="200" step="0.01" value="${esc(c.tasaAnual != null ? +(c.tasaAnual * 100).toFixed(2) : '')}" /></label>
         <button class="btn">${icon('check')}Guardar datos</button>
       </form></details>
   </article>`;

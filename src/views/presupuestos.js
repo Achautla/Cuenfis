@@ -52,7 +52,7 @@ export function render(main) {
           <span class="avatar sm" style="background:${c.color}">${icon(c.icono)}</span>
           <span class="pl-main"><span class="pl-top"><b>${esc(c.nombre)}</b><span class="num small">${money(g)}${lim ? ` de ${money(lim)}` : ''}</span></span>
             ${lim ? `<span class="pl-track"><i style="--w:${Math.min(100, uso * 100)}%"></i></span>` : `<span class="small muted">${prom(c.id) ? `Promedio: ${money(prom(c.id))} al mes` : 'Sin límite'}</span>`}</span>
-          <label class="pl-in"><span class="sr-only">Límite mensual de ${esc(c.nombre)}</span><input type="number" min="0" step="100" inputmode="decimal" data-cat="${c.id}" value="${esc(lim)}" placeholder="Límite" /></label>
+          <label class="pl-in"><span class="sr-only">Límite mensual de ${esc(c.nombre)}</span><input type="number" min="0" step="0.01" inputmode="decimal" data-cat="${c.id}" value="${esc(lim)}" placeholder="Límite" /></label>
         </li>`; }).join('')}</ul>
     </div>
   </section>`;
