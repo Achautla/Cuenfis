@@ -111,3 +111,32 @@ describe('Fase 9: consultas por chat', () => {
     expect(ev.find((e) => e.t === 'propuesta').datos).toMatchObject({ tipo: 'entrada', monto: 8500, forma_pago: 'transferencia' });
   });
 });
+
+describe('Fase 10: asistencia en la declaración', () => {
+  it('las casillas de la app y del servidor son las mismas', async () => {
+    const { IDS_CASILLAS } = await import('../src/ia/casillas.js');
+    const { CASILLAS_DECLARACION } = await import('../supabase/functions/_shared/herramientas.js');
+    expect(IDS_CASILLAS).toEqual(CASILLAS_DECLARACION);
+  });
+  it('guia_casilla da el valor, el redondeo del portal, la explicación y la fuente', () => {
+    const mes = HOY.slice(0, 7);
+    const g = ia.ejecutar('guia_casilla', { casilla: 'isr_ingresos', periodo: mes });
+    expect(g.casilla).toBe('Total de ingresos efectivamente cobrados');
+    expect(g.valor_en_portal).toBe(Math.round(g.valor));
+    expect(g.fuente.articulo).toMatch(/113-E/);
+    expect(ia.ejecutar('guia_casilla', { casilla: 'isr_tasa', periodo: mes }).valor).toMatch(/%$/);
+    expect(ia.ejecutar('guia_casilla', { casilla: 'isr_ingresos', periodo: '2026' }).error).toBeTruthy();
+    expect(ia.ejecutar('guia_casilla', { casilla: 'nada', periodo: mes }).error).toBeTruthy();
+  });
+  it('demostración: explica una casilla con el valor sin centavos', async () => {
+    const ev = await correr('¿Qué pongo en «IVA acreditable del periodo» de mi declaración de noviembre 2026?');
+    expect(ev[0]).toMatchObject({ nombre: 'guia_casilla' });
+    expect(ev.at(-1).md).toMatch(/pestaña Determinación/);
+    expect(ev.at(-1).md).toMatch(/estimación/);
+  });
+  it('demostración: recorre el ISR paso a paso', async () => {
+    const ev = await correr('Guíame paso a paso con el ISR de este mes');
+    expect(ev.at(-1).md).toMatch(/Cantidad a pagar/);
+    expect(ev.at(-1).md).toMatch(/Tasa aplicable/);
+  });
+});

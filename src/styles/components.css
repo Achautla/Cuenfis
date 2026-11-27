@@ -171,3 +171,24 @@ small + .fuente-chip { display: flex; width: fit-content; }
 .fuente-prov svg { width: 16px; height: 16px; flex: none; margin-top: 2px; }
 .fuente-dlg .conf-foot { flex-wrap: wrap; }
 .fuente-dlg a.btn { text-decoration: none; }
+
+/* ---------- Movimiento y color (fase 10) ---------- */
+.btn { transition: transform var(--t-fast) var(--ease), box-shadow var(--t-med) var(--ease), background var(--t-fast), border-color var(--t-fast), color var(--t-fast); }
+.btn:active:not(:disabled) { transform: scale(.97); }
+.btn.primary { background: var(--grad-marino); border-color: transparent; box-shadow: 0 6px 16px -8px rgba(10, 37, 64, .6); }
+.btn.primary:hover { background: var(--grad-marca); box-shadow: 0 8px 20px -8px rgba(63, 95, 224, .65); }
+:root[data-theme="dark"] .btn.primary { background: var(--grad-marca); color: #fff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary { background: var(--grad-marca); color: #fff; } }
+.card { transition: box-shadow var(--t-med) var(--ease), transform var(--t-med) var(--ease), border-color var(--t-med); }
+@media (hover: hover) { a.card:hover, .card.click:hover { transform: translateY(-2px); box-shadow: 0 10px 24px -14px rgba(10, 37, 64, .35); } }
+.seg button[aria-pressed="true"] { box-shadow: 0 2px 8px -3px rgba(26, 107, 209, .45), inset 0 -2px 0 var(--accent); }
+.page-head h1 { position: relative; }
+.page-head h1::after { content: ""; display: block; width: 36px; height: 3px; margin-top: 6px; border-radius: 3px; background: var(--grad-marca); transform-origin: left; animation: subrayado .5s var(--ease) both .1s; }
+@keyframes subrayado { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.chip { transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast) var(--ease); }
+.chip:active { transform: scale(.97); }
+@media (prefers-reduced-motion: reduce) {
+  .btn, .card, .chip { transition: none; }
+  .btn:active:not(:disabled), .chip:active { transform: none; }
+  .page-head h1::after { animation: none; }
+}

@@ -35,6 +35,7 @@ import * as avisos from './views/avisos.js';
 import * as reportes from './views/reportes.js';
 import * as reglasVista from './views/reglas.js';
 import { activarFuentes } from './ui/fuente.js';
+import { entrada } from './ui/animaciones.js';
 import * as reglasRemotas from './data/reglas-remotas.js';
 import * as legal from './views/legal.js';
 import * as asistente from './views/asistente.js';
@@ -150,7 +151,7 @@ const falla = (e) => {
 };
 window.addEventListener('error', (ev) => falla(ev.error ?? ev.message));
 window.addEventListener('unhandledrejection', (ev) => falla(ev.reason));
-window.addEventListener('hashchange', () => { render(); $('#main').focus({ preventScroll: true }); window.scrollTo(0, 0); });
+window.addEventListener('hashchange', () => { render(); $('#main').focus({ preventScroll: true }); window.scrollTo(0, 0); entrada($('#main')); });
 suscribir(render);
 alRecalcular(render);
 reglasRemotas.actualizar(); // trae correcciones o reglas de un año nuevo sin publicar otra versión de la app
@@ -206,6 +207,7 @@ let ultimoUsuario = null;
 nube.alCambiar((s) => { const id = s.usuario?.id ?? null; if (id !== ultimoUsuario) { ultimoUsuario = id; reintentarReal(); sincronizarConsentimiento(); } });
 arrancarSync();
 render();
+entrada($('#main'));
 
 // Avisos del dispositivo al abrir la app y al volver a ella
 const avisar = () => revisarAvisos(getEstado(), getFoto()).catch(() => {});

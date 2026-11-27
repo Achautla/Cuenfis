@@ -10,6 +10,9 @@ export const CLAVES_REGLAS = [
 
 const FECHA = { type: 'string', description: 'Fecha AAAA-MM-DD' };
 
+/** Casillas del portal que explica guia_casilla (deben coincidir con src/ia/casillas.js). */
+export const CASILLAS_DECLARACION = ['isr_ingresos', 'isr_tasa', 'isr_determinado', 'isr_retenido', 'isr_cargo', 'iva_16', 'iva_8', 'iva_0', 'iva_total', 'iva_retenido', 'iva_acreditable', 'iva_favor', 'iva_cargo', 'anual_ingresos', 'anual_retenido', 'anual_deducciones', 'anual_base', 'anual_isr'];
+
 export const HERRAMIENTAS = [
   {
     name: 'resumen_periodo',
@@ -49,6 +52,11 @@ export const HERRAMIENTAS = [
     name: 'declaracion_anual',
     description: 'Cifras de la declaración anual (sueldos, deducciones personales, ISR del ejercicio) de un año, calculadas por el motor de Cuenfis.',
     input_schema: { type: 'object', properties: { anio: { type: 'integer' } }, required: ['anio'], additionalProperties: false },
+  },
+  {
+    name: 'guia_casilla',
+    description: 'Qué va en una casilla del portal del SAT, su valor para el periodo (calculado por Cuenfis, también redondeado a pesos como lo pide el portal), una explicación sencilla y su fundamento. Úsala cuando el usuario pregunte qué poner en su declaración.',
+    input_schema: { type: 'object', properties: { casilla: { type: 'string', enum: CASILLAS_DECLARACION }, periodo: { type: 'string', description: 'AAAA-MM para ISR e IVA mensual; AAAA para la anual' } }, required: ['casilla', 'periodo'], additionalProperties: false },
   },
   {
     name: 'regla_fiscal',

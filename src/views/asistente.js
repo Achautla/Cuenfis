@@ -11,18 +11,21 @@ import { confirmar } from '../ui/confirmar.js';
 import { markdown } from '../ui/markdown.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, money, fechaCorta, hoyISO } from '../ui/dom.js';
+import { aparecer } from '../ui/animaciones.js';
 import '../styles/views/asistente.css';
 
 let mainRef = null;
 let quitar = null;
 let borrador = '';
+let vistos = 0; // bloques ya mostrados, para animar solo los nuevos
+let pintado = false;
 
 const FORMAS = { efectivo: 'Efectivo', tarjeta: 'Tarjeta', transferencia: 'Transferencia' };
 
 function sugerencias(modo) {
   const resico = regimenesEn(getEstado().perfil, hoyISO()).includes('resico');
   if (modo === 'declaracion') return resico
-    ? ['¿Qué pongo en mi declaración de este mes?', '¿Cuánto IVA me toca pagar?', '¿De dónde sale mi tasa de ISR?']
+    ? ['Guíame paso a paso con el ISR de este mes', 'Guíame paso a paso con el IVA de este mes', '¿Qué pongo en «IVA acreditable del periodo»?', '¿Qué pongo en «Tasa aplicable»?']
     : ['¿Cómo va mi declaración anual?', '¿Qué deducciones me faltan?', '¿Cuál es el tope de deducciones?'];
   return ['¿Cuánto gasté este mes?', 'Ayer pagué 350 de gasolina con tarjeta', '📷 Toma foto a una factura con QR', '¿Cómo voy de ahorro este año?', resico ? '¿Cuánto voy a pagar al SAT?' : '¿En qué se me va el dinero?'];
 }
@@ -116,6 +119,11 @@ function pintar(main) {
   </section>`;
 
   const chat = $('#iaChat', main);
+  // Solo lo nuevo se anima: los mensajes que ya estaban no vuelven a aparecer
+  const nuevos = [...chat.querySelectorAll(':scope > .ia-msg, :scope > .ia-pasos, :scope > .ia-prop')].slice(vistos);
+  if (pintado) nuevos.forEach((el) => aparecer(el, el.classList.contains('yo') ? 'derecha' : 'abajo'));
+  vistos = chat.querySelectorAll(':scope > .ia-msg:not(.pensando), :scope > .ia-pasos, :scope > .ia-prop').length;
+  pintado = true;
   chat.scrollTop = chat.scrollHeight;
   // En el celular la página entera es la conversación: baja hasta lo más reciente
   if (!vacio && matchMedia('(max-width: 899px)').matches) window.scrollTo(0, document.documentElement.scrollHeight);
@@ -158,6 +166,7 @@ function pintar(main) {
 }
 
 export function render(main) {
+  if (mainRef !== main || !main.querySelector('.asistente')) { vistos = 0; pintado = false; }
   mainRef = main;
   quitar?.();
   quitar = null;

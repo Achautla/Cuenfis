@@ -13,6 +13,10 @@
   --navy-2: #13355a;
   --accent: #1a6bd1;
   --accent-soft: #e8f1fd;
+  --accent-2: #00a3c4;
+  --grad-marca: linear-gradient(135deg, #1a6bd1 0%, #3f5fe0 55%, #6a4be0 100%);
+  --grad-marino: linear-gradient(135deg, #0a2540 0%, #133a6b 60%, #1f3f8a 100%);
+  --grad-suave: linear-gradient(135deg, rgba(26, 107, 209, .07), rgba(106, 75, 224, .06));
   --in: #0b7a5f;
   --in-soft: #e6f5f0;
   --out: #c2410c;

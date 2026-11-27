@@ -108,3 +108,10 @@
 .ia-top:hover { background: rgba(255, 255, 255, .08); }
 .ia-top:focus-visible { outline: 2px solid #8fc1ff; outline-offset: 2px; }
 
+
+/* Barra lateral y de navegación con más vida (fase 10) */
+.sidebar { background: var(--grad-marino); }
+.nav a { transition: background var(--t-fast), color var(--t-fast); }
+.nav a[aria-current="page"] { background: linear-gradient(90deg, rgba(106, 168, 255, .22), rgba(169, 147, 255, .12)); box-shadow: inset 3px 0 0 #8fc1ff; }
+@media (max-width: 899px) { .nav a[aria-current="page"] { box-shadow: inset 0 -2px 0 #8fc1ff; } }
+.mobile-top { background: var(--grad-marino); }
