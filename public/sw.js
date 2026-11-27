@@ -1,6 +1,7 @@
 // Service worker: la app funciona sin conexión. Navegación: red primero; recursos: caché primero.
-const CACHE = 'cuenfis-v2';
-const BASE = ['/', '/index.html', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png'];
+const CACHE = 'cuenfis-v3';
+const BASE = ['./', './index.html', './manifest.webmanifest', './icons/icon.svg', './icons/icon-192.png'];
+const INDEX = new URL('./index.html', self.registration.scope).href;
 
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(BASE))); self.skipWaiting(); });
 self.addEventListener('activate', (e) => {
@@ -11,7 +12,7 @@ self.addEventListener('fetch', (e) => {
   const { request } = e;
   if (request.method !== 'GET' || new URL(request.url).origin !== location.origin) return;
   if (request.mode === 'navigate') {
-    e.respondWith(fetch(request).then((r) => { caches.open(CACHE).then((c) => c.put('/index.html', r.clone())); return r; }).catch(() => caches.match('/index.html')));
+    e.respondWith(fetch(request).then((r) => { const copia = r.clone(); caches.open(CACHE).then((c) => c.put(INDEX, copia)); return r; }).catch(() => caches.match(INDEX)));
     return;
   }
   e.respondWith(caches.match(request).then((hit) => hit || fetch(request).then((r) => {

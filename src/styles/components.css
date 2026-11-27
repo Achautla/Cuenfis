@@ -155,3 +155,4 @@ dialog.conf { width: min(420px, calc(100vw - 32px)); max-width: 420px; margin: a
 .btn.danger-solid { background: var(--out); border-color: var(--out); color: #fff; }
 .btn.danger-solid:hover { filter: brightness(.95); background: var(--out); }
 @media (max-width: 899px) { dialog.conf { width: calc(100vw - 32px); max-width: calc(100vw - 32px); margin: auto; border-radius: var(--r-lg); } }
+.link-btn { background: none; border: 0; color: var(--accent); font: inherit; font-size: 14px; cursor: pointer; padding: 6px 0; justify-self: start; text-decoration: underline; text-underline-offset: 3px; }

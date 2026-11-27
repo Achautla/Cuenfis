@@ -1,0 +1,5 @@
+.legal-doc { max-width: 760px; line-height: 1.6; }
+.legal-doc h2 { font-size: 17px; margin: 20px 0 6px; color: var(--navy); }
+.legal-doc h2:first-child { margin-top: 0; }
+.legal-doc p { margin: 0 0 10px; color: var(--ink-2); }
+.legal-doc ul { margin: 0 0 10px; padding-left: 20px; color: var(--ink-2); display: grid; gap: 6px; }

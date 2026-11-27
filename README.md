@@ -69,3 +69,13 @@ Supabase → Authentication → URL Configuration (Site URL y Redirect URLs).
 
 Las tablas relacionales de la migración inicial (`movimientos`, `cuentas`…) quedan reservadas para reportes del lado
 del servidor en una fase posterior; hoy la fuente de verdad es el documento sincronizado.
+
+## Lanzamiento (Fase 5)
+
+- **Legal**: `src/legal/textos.js` tiene el aviso de privacidad (LFPDPPP, DOF 20-03-2025) y los términos. Antes de publicar,
+  completa los datos del responsable marcados con `[ ]` y pide revisión a un abogado. Al crear cuenta se registra el
+  consentimiento expreso en `public.consentimientos` con la versión.
+- **Derechos ARCO en la app**: descargar mis datos, borrar la copia en la nube y eliminar mi cuenta (`eliminar_mi_cuenta()`).
+- **Seguridad**: Content-Security-Policy en el build (`vite.config.js`), RLS en todas las tablas, bucket privado.
+- **Accesibilidad**: revisión WCAG 2 AA con axe en las 18 pantallas, sin hallazgos.
+- **Publicación**: build con rutas relativas (`base: './'`), funciona en dominio propio, Vercel o GitHub Pages.

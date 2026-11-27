@@ -1,6 +1,6 @@
 {
   "name": "cuenfis",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Cuenfis: finanzas personales y fiscales para personas físicas en México",
   "scripts": {
     "dev": "vite",

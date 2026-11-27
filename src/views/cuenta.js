@@ -4,6 +4,8 @@ import { getEstado, reiniciar } from '../data/store.js';
 import { confirmar } from '../ui/confirmar.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, toast } from '../ui/dom.js';
+import { VERSION_LEGAL, AVISO_SIMPLIFICADO } from '../legal/textos.js';
+import { descargar } from '../ui/dom.js';
 import '../styles/views/cuenta.css';
 
 let modo = 'entrar';
@@ -19,6 +21,8 @@ export const textoFase = (f) => FASES[f] ?? FASES.local;
 const fechaHora = (iso) => new Date(iso).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
 
 async function trasEntrar(main) {
+  // Registra el consentimiento expreso dado al crear la cuenta (o pendiente de una cuenta confirmada por correo)
+  try { const v = localStorage.getItem('cuenfis:consentimiento'); if (v) { await nube.registrarConsentimiento(v); localStorage.removeItem('cuenfis:consentimiento'); } } catch { /* se reintenta en el siguiente inicio de sesión */ }
   try {
     const r = await primeraVez();
     if (r === 'subido') toast('Sesión iniciada. Tus datos ya se guardan en la nube.', icon('cloud'));
@@ -71,7 +75,12 @@ export function render(main) {
     </div>
     <div class="card">
       <div class="card-head"><h2>Sesión</h2></div>
-      <div class="row"><button class="btn" id="salir">${icon('logout')}Cerrar sesión</button><button class="btn danger" id="borrarNube">${icon('trash')}Borrar mis datos de la nube</button></div>
+      <div class="row"><button class="btn" id="salir">${icon('logout')}Cerrar sesión</button></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Tus datos y tus derechos</h2></div>
+      <p class="small muted" style="margin-bottom:12px">Puedes descargar todo lo que guardamos, borrar solo la copia en la nube o eliminar tu cuenta por completo. <a href="#/privacidad">Aviso de privacidad</a></p>
+      <div class="row"><button class="btn" id="descargarTodo">${icon('download')}Descargar mis datos</button><button class="btn danger" id="borrarNube">${icon('trash')}Borrar mis datos de la nube</button><button class="btn danger" id="eliminarCuenta">${icon('trash')}Eliminar mi cuenta</button></div>
     </div>`
     : `
     <div class="card cu-form">
@@ -79,6 +88,8 @@ export function render(main) {
       <form id="fAcceso" novalidate>
         <label class="field"><span>Correo</span><input name="email" type="email" required autocomplete="email" inputmode="email" /></label>
         ${modo !== 'recuperar' ? `<label class="field"><span>Contraseña</span><input name="p" type="password" minlength="8" required autocomplete="${modo === 'crear' ? 'new-password' : 'current-password'}" />${modo === 'crear' ? '<span class="hint">Mínimo 8 caracteres. Usa una que no uses en otro lado.</span>' : ''}</label>` : '<p class="small muted" style="margin-bottom:12px">Te enviaremos un enlace para crear una contraseña nueva.</p>'}
+        ${modo === 'crear' ? `<p class="small muted cu-aviso">${esc(AVISO_SIMPLIFICADO)} <a href="#/privacidad">Aviso de privacidad completo</a>.</p>
+        <label class="check"><input type="checkbox" name="acepto" /><span>Leí y acepto el <a href="#/privacidad">Aviso de privacidad</a> y los <a href="#/terminos">Términos</a>, y consiento expresamente el tratamiento de mis datos financieros y patrimoniales.</span></label>` : ''}
         <p class="small neg" id="errAcceso" role="alert"></p>
         <button class="btn primary full" ${ocupado ? 'disabled' : ''}>${icon(modo === 'recuperar' ? 'check' : 'user')}${modo === 'entrar' ? 'Iniciar sesión' : modo === 'crear' ? 'Crear cuenta' : 'Enviar enlace'}</button>
       </form>
@@ -96,11 +107,13 @@ export function render(main) {
     const err = $('#errAcceso', main);
     if (!/^\S+@\S+\.\S+$/.test(email)) { err.textContent = 'Escribe un correo válido, por ejemplo nombre@correo.com.'; fa.email.focus(); return; }
     if (modo !== 'recuperar' && p.length < 8) { err.textContent = 'La contraseña necesita al menos 8 caracteres.'; fa.p.focus(); return; }
+    if (modo === 'crear' && !fa.acepto.checked) { err.textContent = 'Para crear tu cuenta necesitamos que aceptes el aviso de privacidad y los términos.'; fa.acepto.focus(); return; }
     ocupado = true; err.textContent = '';
     try {
       if (modo === 'entrar') { await nube.entrar(email, p); ocupado = false; await trasEntrar(main); return; }
       if (modo === 'crear') {
         const r = await nube.registrarse(email, p);
+        try { localStorage.setItem('cuenfis:consentimiento', VERSION_LEGAL); } catch { /* */ }
         if (r.confirmar) { toast('Te enviamos un correo. Abre el enlace para activar tu cuenta y luego inicia sesión.', icon('check-circle')); modo = 'entrar'; }
         else { ocupado = false; await trasEntrar(main); return; }
       }
@@ -130,6 +143,19 @@ export function render(main) {
     if (op === true) { reiniciar(); location.hash = '#/inicio'; }
     toast('Sesión cerrada', icon('logout'));
     render(main);
+  });
+  $('#descargarTodo', main)?.addEventListener('click', async () => {
+    try {
+      const remoto = await nube.bajar();
+      descargar(`cuenfis-mis-datos-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ cuenta: { correo: u.email, creada: u.created_at }, nube: remoto, dispositivo: getEstado() }, null, 2), 'application/json');
+    } catch (e) { toast(e.message, icon('alert')); }
+  });
+  $('#eliminarCuenta', main)?.addEventListener('click', async () => {
+    const op = await confirmar({ titulo: '¿Eliminar tu cuenta de Cuenfis?', accion: 'Eliminar cuenta', escribir: 'ELIMINAR',
+      efectos: ['Se borran tu cuenta, tus datos en la nube, las 30 versiones guardadas y tus acuses.', 'No se puede deshacer. Descarga antes tus datos si los quieres conservar.', 'Los datos de este dispositivo también se borran.'] });
+    if (!op) return;
+    try { await nube.eliminarCuenta(); reiniciar(); location.hash = '#/inicio'; toast('Tu cuenta y tus datos se eliminaron', icon('check-circle')); }
+    catch (e) { toast(e.message, icon('alert')); render(main); }
   });
   $('#borrarNube', main)?.addEventListener('click', async () => {
     if (!(await confirmar({ titulo: '¿Borrar tus datos de la nube?', accion: 'Borrar de la nube', escribir: 'BORRAR',

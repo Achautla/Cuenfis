@@ -25,6 +25,7 @@ import * as clientes from './views/clientes.js';
 import * as cuenta from './views/cuenta.js';
 import * as avisos from './views/avisos.js';
 import * as reportes from './views/reportes.js';
+import * as legal from './views/legal.js';
 import { abrirFormulario } from './views/movimiento-form.js';
 import { arrancar as arrancarSync } from './data/sync.js';
 import * as nube from './data/nube.js';
@@ -50,17 +51,20 @@ const RUTAS = {
   aprende: { v: aprende, t: 'Aprende', i: 'book', g: 'mas' },
   cuenta: { v: cuenta, t: 'Cuenta y nube', i: 'cloud', g: 'mas' },
   ajustes: { v: ajustes, t: 'Ajustes', i: 'settings', g: 'mas' },
+  privacidad: { v: legal.privacidad, t: 'Aviso de privacidad', i: 'lock', g: 'mas', oculta: true },
+  terminos: { v: legal.terminos, t: 'Términos y condiciones', i: 'file', g: 'mas', oculta: true },
 };
 const GRUPOS = { dinero: 'Mi dinero', plan: 'Planear', sat: 'Impuestos', mas: 'App' };
-const visibles = () => Object.entries(RUTAS).filter(([, r]) => !r.ver || r.ver(getEstado()));
+const permitidas = () => Object.entries(RUTAS).filter(([, r]) => !r.ver || r.ver(getEstado()));
+const visibles = () => permitidas().filter(([, r]) => !r.oculta);
 
 function ruta() {
   const r = location.hash.replace(/^#\/?/, '').split('?')[0];
-  return visibles().some(([k]) => k === r) ? r : 'inicio';
+  return permitidas().some(([k]) => k === r) ? r : 'inicio';
 }
 
 function pintarNav(actual) {
-  const enMas = !RUTAS[actual].p;
+  const enMas = !RUTAS[actual].p && !RUTAS[actual].oculta;
   const nAvisos = recordatorios(getEstado(), getFoto()).filter((x) => x.nivel !== 'info').length;
   let g = null;
   $('#nav').innerHTML = visibles().map(([k, r]) => {
@@ -92,7 +96,10 @@ function render() {
     document.querySelector('.sidebar').hidden = true;
     $('#fab').hidden = true;
     // Sin perfil solo se puede ver la bienvenida o iniciar sesión para traer tus datos
-    if (location.hash.startsWith('#/cuenta')) cuenta.render(main); else bienvenida.render(main);
+    const r0 = location.hash.replace(/^#\/?/, '').split('?')[0];
+    if (r0 === 'cuenta') cuenta.render(main);
+    else if (r0 === 'privacidad' || r0 === 'terminos') legal.render(main, r0);
+    else bienvenida.render(main);
     return;
   }
   document.querySelector('.sidebar').hidden = false;
@@ -101,9 +108,22 @@ function render() {
   $('#fab').hidden = false;
   document.title = `${RUTAS[r].t} · Cuenfis`;
   RUTAS[r].v.render(main);
+  // Tablas con desplazamiento horizontal: alcanzables con teclado
+  main.querySelectorAll('.table-wrap').forEach((t) => { t.tabIndex = 0; t.setAttribute('role', 'region'); t.setAttribute('aria-label', 'Tabla, desliza para ver más'); });
 }
 
 injectSprite();
+
+// Si algo falla, que no se quede en silencio: aviso amable y la app sigue (los datos ya están guardados)
+let ultimoAviso = 0;
+const falla = (e) => {
+  console.error(e);
+  if (Date.now() - ultimoAviso < 8000) return;
+  ultimoAviso = Date.now();
+  import('./ui/dom.js').then(({ toast }) => toast('Algo no salió bien en esta pantalla. Tus datos están a salvo; intenta de nuevo o recarga la página.', icon('alert')));
+};
+window.addEventListener('error', (ev) => falla(ev.error ?? ev.message));
+window.addEventListener('unhandledrejection', (ev) => falla(ev.reason));
 window.addEventListener('hashchange', () => { render(); $('#main').focus({ preventScroll: true }); window.scrollTo(0, 0); });
 suscribir(render);
 $('#fab').onclick = () => abrirFormulario({ tipo: 'entrada' });

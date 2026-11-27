@@ -152,4 +152,25 @@ export async function urlAcuse(ruta) {
 }
 export async function borrarAcuse(ruta) { await sb.storage.from('acuses').remove([ruta]); }
 
+/* ---------- Derechos del titular ---------- */
+
+/** Registra la aceptación expresa del aviso de privacidad y los términos (versión vigente). */
+export async function registrarConsentimiento(version) {
+  const filas = ['aviso_privacidad', 'terminos'].map((documento) => ({ documento, version }));
+  const { error } = await sb.from('consentimientos').upsert(filas, { onConflict: 'user_id,documento,version', ignoreDuplicates: true });
+  if (error) throw new Error(mensaje(error));
+}
+
+/** Elimina la cuenta: primero los acuses del bucket, luego el usuario (y en cascada todo lo demás). */
+export async function eliminarCuenta() {
+  const { data: archivos } = await sb.storage.from('acuses').list(usuario.id, { limit: 1000 });
+  if (archivos?.length) await sb.storage.from('acuses').remove(archivos.map((a) => `${usuario.id}/${a.name}`));
+  const { error } = await sb.rpc('eliminar_mi_cuenta');
+  if (error) throw new Error(mensaje(error));
+  await sb.auth.signOut({ scope: 'local' }).catch(() => {});
+  usuario = null;
+  guardarMeta({});
+  fijar({ fase: 'local', version: null, error: null });
+}
+
 export { mensaje, fijar as fijarSync };
