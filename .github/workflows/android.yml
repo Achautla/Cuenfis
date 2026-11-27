@@ -16,10 +16,10 @@ jobs:
         with: { node-version: 22, cache: npm }
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 21, cache: gradle }
-      - uses: android-actions/setup-android@v3
       - run: npm ci
       - run: npm test
       - run: npm run android
+      # El runner de Ubuntu ya trae el SDK de Android (ANDROID_HOME)
       - name: Compilar APK
         working-directory: android
         run: chmod +x gradlew && ./gradlew --no-daemon assembleDebug
