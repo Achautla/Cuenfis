@@ -13,12 +13,11 @@ import '../styles/views/reglas.css';
 
 let anioSel = null, todos = false;
 
-const lim = (x) => (x === Infinity || x == null ? 'En adelante' : money(x));
 
 function tablaTarifa(t) {
   return `<details class="rg-tabla"><summary>Ver tarifa (${t.length} tramos)</summary><div class="table-wrap"><table>
-    <thead><tr><th class="n">Límite inferior</th><th class="n">Límite superior</th><th class="n">Cuota fija</th><th class="n">% sobre excedente</th></tr></thead>
-    <tbody>${t.map(([a, b, c, d]) => `<tr><td class="n num">${money(a)}</td><td class="n num">${lim(b)}</td><td class="n num">${money(c)}</td><td class="n num">${pct(d, 2)}</td></tr>`).join('')}</tbody>
+    <thead><tr><th>Ingresos</th><th class="n">Cuota fija</th><th class="n">% sobre excedente</th></tr></thead>
+    <tbody>${t.map(([a, b, c, d]) => `<tr><td>${b === Infinity || b == null ? `Desde <span class="num">${money(a)}</span> en adelante` : `De <span class="num">${money(a)}</span> a <span class="num">${money(b)}</span>`}</td><td class="n num">${money(c)}</td><td class="n num">${pct(d, 2)}</td></tr>`).join('')}</tbody>
   </table></div></details>`;
 }
 
@@ -30,8 +29,8 @@ function mostrar(clave, p) {
     case 'porcentaje': return `<span class="num">${pct(v, v * 100 % 1 ? 2 : 0)}</span>`;
     case 'fraccion': return Math.abs(v - 2 / 3) < 1e-6 ? '2/3 del IVA' : `<span class="num">${pct(v, 2)}</span>`;
     case 'dia': return `Día ${v} del mes siguiente`;
-    case 'tasas': return `<div class="table-wrap"><table><thead><tr><th class="n">Cobros del mes hasta</th><th class="n">Tasa</th></tr></thead>
-      <tbody>${v.map((f) => `<tr><td class="n num">${money(f.hasta)}</td><td class="n num">${pct(f.tasa, 2)}</td></tr>`).join('')}</tbody></table></div>`;
+    case 'tasas': return `<div class="table-wrap"><table><thead><tr><th>Cobros del mes</th><th class="n">Tasa</th></tr></thead>
+      <tbody>${v.map((f) => `<tr><td>Hasta <span class="num">${money(f.hasta)}</span></td><td class="n num">${pct(f.tasa, 2)}</td></tr>`).join('')}</tbody></table></div>`;
     case 'tarifa': return tablaTarifa(v);
     case 'subsidio': return v ? `${pct(v.porcentajeUmaMensual, 2)} de la UMA mensual (<span class="num">${money(p.uma.diaria * v.diasMes * v.porcentajeUmaMensual)}</span> al mes) si tu sueldo no pasa de <span class="num">${money(v.limiteIngresoMensual)}</span> al mes` : 'Sin subsidio este año';
     case 'topeDeducciones': return `El menor entre ${v.umasAnuales} UMA anuales (<span class="num">${money(umaAnual(p) * v.umasAnuales)}</span>) y ${pct(v.porcentajeIngresos)} de tus ingresos`;

@@ -8,7 +8,8 @@
   },
   "plugins": {
     "LocalNotifications": {
-      "iconColor": "#0a2540"
+      "smallIcon": "ic_stat_cuenfis",
+      "iconColor": "#1a6bd1"
     },
     "StatusBar": {
       "style": "DARK",

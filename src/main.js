@@ -1,4 +1,5 @@
 // Tipografías incluidas en la app (sin pedirlas a Google): funcionan sin conexión y no comparten tu IP con terceros
+import { vigilarTablas } from './ui/tablas.js';
 import '@fontsource/inter/latin-400.css';
 import '@fontsource/inter/latin-500.css';
 import '@fontsource/inter/latin-600.css';
@@ -228,6 +229,7 @@ nube.alCambiar((s) => { const id = s.usuario?.id ?? null; if (id !== ultimoUsuar
 arrancarSync();
 render();
 entrada($('#main'));
+vigilarTablas($('#main'));
 huella.iniciar();
 iniciarTeclado();
 

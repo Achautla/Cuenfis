@@ -7,8 +7,9 @@ android {
         applicationId "mx.cuenfis.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        // Cada compilación de GitHub Actions sube el número: Android solo actualiza si el número no baja
+        versionCode((System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger() + 1)
+        versionName "1.0." + (System.getenv("GITHUB_RUN_NUMBER") ?: "0")
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,7 +17,21 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Llave FIJA para las APK de prueba. Sin ella, cada compilación en la nube firma con una llave
+    // nueva y Android se niega a actualizar ("conflicto con un paquete existente"): había que desinstalar.
+    // No es secreta ni sirve para Google Play; la de Play irá como secreto del repositorio.
+    signingConfigs {
+        pruebas {
+            storeFile file('cuenfis-pruebas.keystore')
+            storePassword 'android'
+            keyAlias 'pruebas'
+            keyPassword 'android'
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.pruebas
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
