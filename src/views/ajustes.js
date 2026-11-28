@@ -6,6 +6,7 @@ import * as nube from '../data/nube.js';
 import { nuevoId } from '../data/acciones.js';
 import { datosDemo } from '../data/demo.js';
 import { icon } from '../ui/icons.js';
+import * as sonidos from '../ui/sonidos.js';
 import { $, esc, money, fechaLarga, toast, descargar, hoyISO } from '../ui/dom.js';
 import { leyenda } from '../ui/fuente.js';
 import { iaActiva, decidir } from '../ia/consentimiento.js';
@@ -74,6 +75,16 @@ export function render(main) {
           ? `<a class="btn" href="#/asistente">${icon('sparkle')}Abrir asistente</a><button class="btn danger" id="iaOff">Desactivar asistente</button>`
           : `<button class="btn primary" id="iaOn">${icon('sparkle')}Activar asistente</button>`}</div>
       </div>
+      <div class="card" id="cSon">
+        <div class="card-head"><h2>Sonidos</h2></div>
+        ${(() => { const sp = sonidos.preferencias(); return `
+        <label class="check"><input type="checkbox" id="sonOn" ${sp.activo ? 'checked' : ''}/> <span>Sonidos de la app<small>Al iniciar sesión, al registrar o borrar movimientos y en avisos. Respetan el modo silencio del teléfono.</small></span></label>
+        <div class="cols-2" ${sp.activo ? '' : 'hidden'} id="sonOps">
+          <label class="field"><span>Estilo</span><select id="sonEst">${Object.entries(sonidos.ESTILOS).map(([k, x]) => `<option value="${k}" ${sp.estilo === k ? 'selected' : ''}>${esc(x.nombre)}: ${esc(x.texto)}</option>`).join('')}</select></label>
+          <label class="field"><span>Volumen</span><input id="sonVol" type="range" min="0.1" max="1" step="0.1" value="${sp.volumen}" /></label>
+        </div>
+        <div class="row" ${sp.activo ? '' : 'hidden'} id="sonPrueba">${Object.entries(sonidos.EVENTOS).map(([k, x]) => `<button type="button" class="btn sm" data-son="${k}">${icon('play')}${esc(x.nombre)}</button>`).join('')}</div>`; })()}
+      </div>
       <div class="card">
         <div class="card-head"><h2>Tus datos</h2></div>
         <p class="small muted" style="margin-bottom:12px">${icon('lock')} ${nube.getUsuario() ? `Con sesión iniciada (${esc(nube.getUsuario().email)}): tus datos se guardan en la nube y en este dispositivo.` : 'Tus datos se guardan solo en este dispositivo.'} <a href="#/cuenta">Cuenta y nube</a> · <a href="#/legal">Información legal</a></p>
@@ -88,6 +99,14 @@ export function render(main) {
     <p class="disclaimer">Cuenfis ${version} · Cálculos estimados con ${esc(leyenda(+getFoto().hoy.slice(0, 4)))}, no son asesoría fiscal. <a href="#/legal">Información legal</a></p>
   </section>`;
 
+  $('#sonOn', main)?.addEventListener('change', (ev) => {
+    sonidos.guardar({ activo: ev.target.checked });
+    $('#sonOps', main).hidden = $('#sonPrueba', main).hidden = !ev.target.checked;
+    if (ev.target.checked) sonidos.sonar('cambio');
+  });
+  $('#sonEst', main)?.addEventListener('change', (ev) => { sonidos.guardar({ estilo: ev.target.value }); sonidos.sonar('entrada'); });
+  $('#sonVol', main)?.addEventListener('change', (ev) => { sonidos.guardar({ volumen: Number(ev.target.value) }); sonidos.sonar('cambio'); });
+  main.querySelectorAll('[data-son]').forEach((b) => (b.onclick = () => sonidos.sonar(b.dataset.son)));
   $('#iaOn', main)?.addEventListener('click', async () => { await decidir(true); toast('Asistente activado', icon('check-circle')); });
   $('#iaOff', main)?.addEventListener('click', async () => {
     const ok = await confirmar({ titulo: '¿Desactivar el asistente?', accion: 'Desactivar asistente',

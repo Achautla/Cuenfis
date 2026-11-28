@@ -160,7 +160,8 @@ const falla = (e) => {
   console.error(e);
   if (Date.now() - ultimoAviso < 8000) return;
   ultimoAviso = Date.now();
-  import('./ui/dom.js').then(({ toast }) => toast('Algo no salió bien en esta pantalla. Tus datos están a salvo; intenta de nuevo o recarga la página.', icon('alert')));
+  const detalle = String(e?.message ?? e ?? '').replace(/\s+/g, ' ').slice(0, 90);
+  import('./ui/dom.js').then(({ toast }) => toast(`Algo no salió bien en esta pantalla. Tus datos están a salvo; intenta de nuevo o recarga la página.${detalle ? ` Detalle: ${detalle}` : ''}`, icon('alert')));
 };
 window.addEventListener('error', (ev) => falla(ev.error ?? ev.message));
 window.addEventListener('unhandledrejection', (ev) => falla(ev.reason));

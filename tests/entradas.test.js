@@ -8,7 +8,9 @@ describe('campos numéricos', () => {
   for (const f of readdirSync(dir).filter((n) => n.endsWith('.js'))) {
     it(`${f} acepta cualquier monto con centavos`, () => {
       const src = readFileSync(new URL(f, dir), 'utf8');
-      const pasos = [...src.matchAll(/step="([^"]*)"/g)].map((m) => m[1]);
+      // Solo campos de dinero: los deslizadores (type="range", como el volumen) tienen su propio paso
+      const sinRangos = src.replace(/<input[^>]*type="range"[^>]*>/g, '');
+      const pasos = [...sinRangos.matchAll(/step="([^"]*)"/g)].map((m) => m[1]);
       expect(pasos.filter((p) => p !== '0.01')).toEqual([]);
     });
   }
