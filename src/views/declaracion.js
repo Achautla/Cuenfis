@@ -1,17 +1,18 @@
 import { getFoto, getEstado, aplicar } from '../data/store.js';
 import { marcarDeclaracion, guardarAcuse } from '../data/acciones.js';
-import { REGIMENES } from '../data/catalogo.js';
+import { REGIMENES, categoria } from '../data/catalogo.js';
 import { params } from '../core/fiscal.js';
 import { reglas } from '../core/reglas.js';
 import { chipFuente, avisoProvisional, leyenda } from '../ui/fuente.js';
 import { regimenesEnRango } from '../core/regimen.js';
 import { icon } from '../ui/icons.js';
-import { $, esc, money, pct, nombreMes, fechaLarga, toast, descargar } from '../ui/dom.js';
+import { $, esc, money, pct, nombreMes, fechaLarga, fechaCorta, toast, descargar } from '../ui/dom.js';
 import { confirmar } from '../ui/confirmar.js';
 import * as nube from '../data/nube.js';
 import { ID_POR_ETIQUETA, CASILLAS, guiaCasilla } from '../ia/casillas.js';
 import { iaActiva } from '../ia/consentimiento.js';
 import * as conv from '../ia/conversacion.js';
+import { abrirFormulario } from './movimiento-form.js';
 import '../styles/views/declaracion.css';
 
 let tab = null, mesSel = null, anioSel = null;
@@ -216,6 +217,17 @@ function anual(y) {
   return h || `<div class="empty">${icon('file')}<p>No tuviste régimenes con declaración en ${y}.</p></div>`;
 }
 
+/** Entradas del mes que no entran a la declaración: el usuario decide si son cobros de su actividad. */
+function noSumadas(m, foto) {
+  if (!m.noSumadas?.length) return '';
+  const movs = m.noSumadas.map((id) => foto.movs.find((x) => x.id === id)).filter(Boolean);
+  return `<div class="notice warn decl-nosum">${icon('alert')}<span>
+    <b>${movs.length === 1 ? 'Una entrada' : `${movs.length} entradas`} de ${esc(nombreMes(m.clave))} por ${money(m.noSumadasTotal)} no ${movs.length === 1 ? 'se suma' : 'se suman'} a esta declaración.</b>
+    Solo cuentan los movimientos con la categoría «Cobro RESICO» y con fecha dentro de tu régimen. Si alguna es un pago por tu trabajo o tus ventas, ábrela y cámbiala a Cobro RESICO. Si es un regalo, un préstamo o una venta personal ocasional, está bien como está.
+    <ul class="decl-nosum-lista">${movs.map((x) => `<li><span>${esc(fechaCorta(x.fecha))} · ${esc(x.nota || x.contraparte || categoria(x.categoria).nombre)}${x.d.regimen === 'resico' && !x.d.fiscal ? ' · <i>fecha fuera de tu régimen</i>' : ''}</span><b>${money(x.monto)}</b><button type="button" class="btn sm" data-revisar="${esc(x.id)}">Revisar</button></li>`).join('')}</ul>
+  </span></div>`;
+}
+
 export function render(main) {
   const foto = getFoto();
   const meses = Object.values(foto.meses).filter((m) => !m.futuro).sort((a, b) => b.clave.localeCompare(a.clave));
@@ -238,6 +250,7 @@ export function render(main) {
         : `<label class="field inline"><span>Ejercicio</span><select id="selAnio">${anios.map((y) => `<option ${y === anioSel ? 'selected' : ''}>${y}</option>`).join('')}</select></label>`}
     </div>` : `<div class="empty card">${icon('file')}<p>Tu perfil no tiene un régimen con declaraciones. Agrégalo en Ajustes.</p><a class="btn" href="#/ajustes">Ir a Ajustes</a></div>`}
     ${avisoProvisional(tab === 'anual' ? anioSel : +(mesSel ?? foto.hoy).slice(0, 4))}
+    ${tab !== 'anual' && m ? noSumadas(m, foto) : ''}
     ${tab !== 'anual' && m ? guia(m) : ''}
     ${tab === 'isr' && m ? isr(m) + estadoMes(m) : ''}
     ${tab === 'iva' && m ? iva(m) + estadoMes(m) : ''}
@@ -245,6 +258,10 @@ export function render(main) {
     <p class="disclaimer">Cálculos estimados con ${esc(leyenda(tab === 'anual' ? anioSel : +(mesSel ?? foto.hoy).slice(0, 4)))}. Confírmalos con el SAT o con un contador antes de declarar. <a href="#/reglas">Ver reglas fiscales</a></p>
   </section>`;
 
+  main.querySelectorAll('[data-revisar]').forEach((b) => (b.onclick = () => {
+    const mov = getEstado().movimientos.find((x) => x.id === b.dataset.revisar);
+    if (mov) abrirFormulario({ mov });
+  }));
   main.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { tab = b.dataset.tab; render(main); }));
   $('#selMes', main)?.addEventListener('change', (e) => { mesSel = e.target.value; render(main); });
   $('#selAnio', main)?.addEventListener('change', (e) => { anioSel = +e.target.value; render(main); });

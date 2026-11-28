@@ -31,3 +31,26 @@ describe('Tablas 2026', () => {
     expect(limiteDeducciones(2_000_000, P)).toBeCloseTo(214090.75, 2);
   });
 });
+
+import { calcular as calcularNoSumadas } from '../src/core/motor.js';
+describe('declaración mensual: entradas que no se suman', () => {
+  const base = { perfil: { regimenes: [{ reg: 'resico', desde: '2026-10-18' }] }, cuentas: [{ id: 'c1', nombre: 'Banco', tipo: 'debito', saldoInicial: 0 }], declaraciones: {} };
+  it('avisa de "Otro ingreso" en un mes con RESICO y no lo suma', () => {
+    const f = calcularNoSumadas({ ...base, movimientos: [
+      { id: 'a', tipo: 'entrada', fecha: '2026-11-05', monto: 50000, categoria: 'otro_ingreso', cuenta: 'c1' },
+      { id: 'b', tipo: 'entrada', fecha: '2026-11-27', monto: 200, categoria: 'otro_ingreso', cuenta: 'c1' },
+    ] }, '2026-11-27');
+    expect(f.meses['2026-11'].total).toBe(0);
+    expect(f.meses['2026-11'].noSumadas).toEqual(['a', 'b']);
+    expect(f.meses['2026-11'].noSumadasTotal).toBe(50200);
+  });
+  it('avisa de un cobro RESICO con fecha antes del régimen; no avisa del sueldo ni de lo que sí se suma', () => {
+    const f = calcularNoSumadas({ ...base, movimientos: [
+      { id: 'a', tipo: 'entrada', fecha: '2026-10-10', monto: 1160, categoria: 'cobro_resico', cuenta: 'c1' },
+      { id: 'b', tipo: 'entrada', fecha: '2026-10-20', monto: 1160, categoria: 'cobro_resico', cuenta: 'c1' },
+    ] }, '2026-11-27');
+    expect(f.meses['2026-10'].noSumadas).toEqual(['a']);
+    expect(f.meses['2026-10'].total).toBe(1000);
+    expect(f.meses['2026-11'].noSumadas).toEqual([]);
+  });
+});

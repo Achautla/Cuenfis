@@ -52,6 +52,7 @@ import { revisar as revisarAvisos } from './ui/notificaciones.js';
 import { getFoto } from './data/store.js';
 import { nativo } from './native.js';
 import * as huella from './ui/huella.js';
+import { iniciarTeclado } from './ui/teclado.js';
 
 // p: aparece en la barra inferior del celular; el resto va en "Más". g: grupo del menú. ver: cuándo se muestra.
 const RUTAS = {
@@ -217,6 +218,7 @@ arrancarSync();
 render();
 entrada($('#main'));
 huella.iniciar();
+iniciarTeclado();
 
 // Avisos del dispositivo al abrir la app y al volver a ella
 const avisar = () => revisarAvisos(getEstado(), getFoto()).catch(() => {});

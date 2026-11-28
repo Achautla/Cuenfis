@@ -57,6 +57,9 @@ export function calcular(estado, hoy) {
       const g0 = r2(total - g16 - g8);
       const ivaTrasladado = suma(cobros, (m) => m.d.iva);
       const ivaRet = suma(cobros, (m) => m.d.ivaRet);
+      // Entradas del mes que NO se suman a la declaración: "Otro ingreso" o cobros con fecha fuera del régimen
+      const noSumadas = activo ? delMes.filter((m) => m.tipo === 'entrada' && !(m.d.fiscal && m.d.regimen === 'resico')
+        && (m.d.clase === 'libre' || (m.d.regimen === 'resico' && !m.d.fiscal))) : [];
       const gastosAct = delMes.filter((m) => m.tipo === 'salida' && m.d.clase === 'actividad');
       const ivaAcred = activo ? suma(gastosAct, (m) => m.d.ivaAcreditable) : 0;
       const ivaNeto = r2(ivaTrasladado - ivaRet - ivaAcred);
@@ -81,6 +84,7 @@ export function calcular(estado, hoy) {
         meses[k] = { clave: k, activo, cobros: cobros.map((m) => m.id), total, tasa, isrDet, isrRet, isrCargo,
           isrFavor: r2(Math.max(0, isrRet - isrDet)), g16, g8, g0, ivaTrasladado, ivaRet, ivaAcred,
           ivaNeto, favorAnterior, favorAplicado, ivaCargo, favorSiguiente: favorIva, totalPagar,
+          noSumadas: noSumadas.map((m) => m.id), noSumadasTotal: suma(noSumadas, (m) => m.monto),
           acredNo: gastosAct.filter((m) => !m.d.ivaAcreditable).map((m) => m.id),
           estado: dec?.estado ?? 'pendiente', declaracion: dec ?? null, cerrado: k < ym(hoy), futuro: k > ym(hoy) };
       }
