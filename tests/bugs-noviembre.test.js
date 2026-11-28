@@ -162,3 +162,15 @@ describe('plugins nativos', () => {
     expect(malos).toEqual([]);
   });
 });
+
+describe('respaldo', () => {
+  it('rechaza respaldos dañados antes de reemplazar los datos', async () => {
+    const { problemaRespaldo } = await import('../src/data/acciones.js');
+    const { datosDemo } = await import('../src/data/demo.js');
+    expect(problemaRespaldo(datosDemo('2026-11-28'))).toBeNull();
+    expect(problemaRespaldo([])).toMatch(/no es un respaldo/);
+    expect(problemaRespaldo({ perfil: {}, movimientos: [{ tipo: 'entrada', monto: '500', fecha: '2026-01-01' }] })).toMatch(/monto/);
+    expect(problemaRespaldo({ perfil: {}, movimientos: [{ tipo: 'regalo', monto: 5, fecha: '2026-01-01' }] })).toMatch(/tipo/);
+    expect(problemaRespaldo({ perfil: {}, movimientos: [], cuentas: 'x' })).toMatch(/cuentas/);
+  });
+});

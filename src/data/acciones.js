@@ -140,3 +140,26 @@ export function estadoVacio() {
     preferencias: { metaAhorro: 0, diaAviso: 10 },
   };
 }
+
+/**
+ * Revisa que un respaldo (.json) tenga la forma que la app entiende antes de restaurarlo.
+ * Devuelve null si está bien, o un texto con el primer problema encontrado.
+ * Evita que un archivo dañado o editado a mano deje la app con cálculos en NaN o pantallas rotas.
+ */
+export function problemaRespaldo(d) {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return 'no es un respaldo de Cuenfis';
+  if (!d.perfil || typeof d.perfil !== 'object') return 'le falta el perfil';
+  if (!Array.isArray(d.movimientos)) return 'le faltan los movimientos';
+  for (const k of ['cuentas', 'recurrentes', 'metas', 'facturas']) {
+    if (d[k] != null && !Array.isArray(d[k])) return `la sección "${k}" está dañada`;
+  }
+  if (d.presupuestos != null && (typeof d.presupuestos !== 'object' || Array.isArray(d.presupuestos))) return 'la sección "presupuestos" está dañada';
+  const fecha = /^\d{4}-\d{2}-\d{2}$/;
+  for (const [i, m] of d.movimientos.entries()) {
+    if (!m || typeof m !== 'object') return `el movimiento ${i + 1} está dañado`;
+    if (!['entrada', 'salida', 'transferencia'].includes(m.tipo)) return `el movimiento ${i + 1} tiene un tipo desconocido`;
+    if (typeof m.monto !== 'number' || !Number.isFinite(m.monto)) return `el movimiento ${i + 1} tiene un monto inválido`;
+    if (typeof m.fecha !== 'string' || !fecha.test(m.fecha)) return `el movimiento ${i + 1} tiene una fecha inválida`;
+  }
+  return null;
+}
