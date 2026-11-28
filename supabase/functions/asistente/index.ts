@@ -137,6 +137,13 @@ Deno.serve(async (req) => {
   if (nuevo && usados >= LIMITE_MENSAJES) {
     return json({ error: 'limite', mensaje: `Llegaste al límite de ${LIMITE_MENSAJES} mensajes de este mes.`, uso: { mensajes: usados, limite: LIMITE_MENSAJES } }, 429, h);
   }
+  // Aparta el mensaje de forma atómica (dos peticiones a la vez no pasan el límite). Si la función SQL
+  // aún no existe, se sigue con la revisión de arriba y el mensaje se suma al final como antes.
+  const { data: reservado, error: er } = await admin.rpc('reservar_uso_ia', { p_user: uid, p_mes: mes, p_mensajes: nuevo ? 1 : 0, p_limite: LIMITE_MENSAJES, p_limite_costo: LIMITE_COSTO });
+  const atomico = !er;
+  if (atomico && reservado !== true) {
+    return json({ error: 'limite', mensaje: 'Llegaste al límite de uso del asistente de este mes.', uso: { mensajes: usados, limite: LIMITE_MENSAJES } }, 429, h);
+  }
 
   try {
     const r = await proveedor().responder({
@@ -146,11 +153,13 @@ Deno.serve(async (req) => {
       herramientas: HERRAMIENTAS,
     });
     await admin.rpc('sumar_uso_ia', {
-      p_user: uid, p_mes: mes, p_mensajes: nuevo ? 1 : 0,
+      p_user: uid, p_mes: mes, p_mensajes: nuevo && !atomico ? 1 : 0,
       p_entrada: r.uso.entrada + r.uso.cacheLeida + r.uso.cacheEscrita, p_salida: r.uso.salida, p_costo: r.costoUsd,
     });
     return json({ contenido: r.contenido, parada: r.parada, modelo: r.modelo, uso: { mensajes: usados + (nuevo ? 1 : 0), limite: LIMITE_MENSAJES } }, 200, h);
   } catch (e) {
+    // Sin respuesta no cuenta: se devuelve el mensaje apartado
+    if (atomico && nuevo) await admin.rpc('sumar_uso_ia', { p_user: uid, p_mes: mes, p_mensajes: -1, p_entrada: 0, p_salida: 0, p_costo: 0 }).then(() => {}, () => {});
     if (e instanceof Anthropic.RateLimitError) return json({ error: 'ocupado', mensaje: 'El asistente está ocupado. Intenta en un minuto.' }, 503, h);
     if (e instanceof Anthropic.BadRequestError) { console.error('peticion rechazada', e.status); return json({ error: 'peticion', mensaje: 'No pude procesar esa conversación. Empieza una nueva.' }, 400, h); }
     if (e instanceof Anthropic.APIError) { console.error('proveedor', e.status); return json({ error: 'proveedor', mensaje: 'El asistente no está disponible por ahora.' }, 502, h); }

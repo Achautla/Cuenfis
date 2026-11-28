@@ -135,6 +135,8 @@ export async function leerVersion(id) {
 export async function borrarNube() {
   const { error } = await sb.from('espacios').delete().eq('user_id', usuario.id);
   if (error) throw new Error(mensaje(error));
+  // Las copias anteriores también (requiere la política de la migración 20261130000000; sin ella no se borra nada y se sigue)
+  await sb.from('espacios_historial').delete().eq('user_id', usuario.id).then(() => {}, () => {});
   guardarMeta({});
 }
 

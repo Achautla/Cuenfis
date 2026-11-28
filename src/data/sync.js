@@ -99,11 +99,32 @@ export async function primeraVez() {
 
 /** Resuelve un conflicto: 'nube' usa la versión remota; 'local' sobrescribe la nube con este dispositivo. */
 export async function resolver(opcion, remoto = remotoEnConflicto) {
-  if (opcion === 'nube') { usarRemoto(remoto); return; }
+  if (opcion === 'nube') { guardarRespaldoLocal(); usarRemoto(remoto); return; }
   nube.adoptar(remoto); // toma su versión como base para que el update pase
   remotoEnConflicto = null;
   await subirAhora();
 }
+
+/* Copia de este dispositivo antes de reemplazarlo con la nube: los datos locales nunca se subieron, así que
+   no están en el historial de versiones. Se guarda una sola copia, en este dispositivo. */
+const RESPALDO = 'cuenfis:respaldo-local';
+function guardarRespaldoLocal() {
+  const e = getEstado();
+  if (!e.perfil) return;
+  try { localStorage.setItem(RESPALDO, JSON.stringify({ en: new Date().toISOString(), datos: e })); } catch { /* sin espacio: se sigue */ }
+}
+export function respaldoLocal() {
+  try { const r = JSON.parse(localStorage.getItem(RESPALDO) ?? 'null'); return r?.datos?.perfil ? r : null; } catch { return null; }
+}
+/** Vuelve a la copia de este dispositivo; se sube como una versión nueva y lo de la nube queda en el historial. */
+export function restaurarRespaldoLocal() {
+  const r = respaldoLocal();
+  if (!r) return false;
+  reemplazar(r.datos);
+  try { localStorage.removeItem(RESPALDO); } catch { /* */ }
+  return true;
+}
+export const olvidarRespaldoLocal = () => { try { localStorage.removeItem(RESPALDO); } catch { /* */ } };
 
 export async function restaurarVersion(id) {
   const v = await nube.leerVersion(id);

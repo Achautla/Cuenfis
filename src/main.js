@@ -193,7 +193,11 @@ function pintarSync(s) {
   top.setAttribute('aria-label', `Nube: ${txt}. Ver detalle`);
   top.innerHTML = icon(nivel === 'mal' ? 'cloud-off' : 'cloud');
   if (!$('#syncPanel').hidden) pintarPanel();
-  if (ruta() === 'cuenta' || location.hash.startsWith('#/cuenta')) render();
+  // En Cuenta, el estado de la nube cambia mientras escribes (correo, contraseña): no se redibuja la página
+  // con un campo activo, para no borrar lo que escribes ni cerrar el teclado. El chip de arriba sí se actualiza.
+  const activo = document.activeElement;
+  const escribiendo = activo && $('#main').contains(activo) && activo.matches('input, textarea, select');
+  if ((ruta() === 'cuenta' || location.hash.startsWith('#/cuenta')) && !escribiendo) render();
 }
 
 function pintarPanel() {

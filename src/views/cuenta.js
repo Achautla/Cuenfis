@@ -1,5 +1,5 @@
 import * as nube from '../data/nube.js';
-import { primeraVez, resolver, subirAhora, restaurarVersion, conflicto } from '../data/sync.js';
+import { primeraVez, resolver, subirAhora, restaurarVersion, conflicto, respaldoLocal, restaurarRespaldoLocal, olvidarRespaldoLocal } from '../data/sync.js';
 import { getEstado, reiniciar } from '../data/store.js';
 import { confirmar } from '../ui/confirmar.js';
 import { icon } from '../ui/icons.js';
@@ -30,7 +30,7 @@ function limpiarDispositivo() {
   reiniciar();
   conv.borrar();
   borrarFotos();
-  for (const k of ['cuenfis:asistente', 'cuenfis:noticias', 'cuenfis:noticias:leidas', 'cuenfis:noticias:ocultas', 'cuenfis:consentimiento']) { try { localStorage.removeItem(k); } catch { /* */ } }
+  for (const k of ['cuenfis:respaldo-local', 'cuenfis:asistente', 'cuenfis:noticias', 'cuenfis:noticias:leidas', 'cuenfis:noticias:ocultas', 'cuenfis:consentimiento']) { try { localStorage.removeItem(k); } catch { /* */ } }
 }
 
 async function trasEntrar(main) {
@@ -55,7 +55,7 @@ async function elegir(remoto, titulo) {
   const op = await confirmar({ titulo: `${titulo}. ¿Cuáles usamos?`, peligro: false,
     accion: 'Usar los de la nube', alternativa: 'Usar los de este dispositivo',
     efectos: [`En la nube: ${n} movimiento(s), guardados el ${fechaHora(remoto.actualizado_en)}${remoto.dispositivo ? ` desde ${remoto.dispositivo}` : ''}.`,
-      `En este dispositivo: ${l} movimiento(s).`, 'La opción que no elijas queda en el historial de versiones por si la necesitas.'] });
+      `En este dispositivo: ${l} movimiento(s).`, 'Si usas los de la nube, guardamos una copia de este dispositivo para que puedas recuperarla. Si usas los de este dispositivo, lo de la nube queda en el historial de versiones.'] });
   if (op === true) { await resolver('nube', remoto); toast('Usamos los datos de la nube', icon('cloud')); }
   else if (op === 'alt') { await resolver('local', remoto); toast('Subimos los datos de este dispositivo', icon('cloud')); }
 }
@@ -89,6 +89,8 @@ export function render(main) {
     <div class="card">
       <div class="card-head"><h2>${icon('history')} Versiones anteriores</h2><span class="spacer"></span>${versiones ? '' : '<button class="btn sm" id="verVers">Ver versiones</button>'}</div>
       <p class="small muted">Guardamos tus últimas 30 versiones. Si borraste o cambiaste algo por error, puedes regresar a una de ellas.</p>
+      ${respaldoLocal() ? `<div class="notice">${icon('history')}<span><b>Copia de este dispositivo</b> del ${esc(fechaHora(respaldoLocal().en))}, de antes de usar los datos de la nube (${respaldoLocal().datos.movimientos?.length ?? 0} movimientos).
+        <span class="row" style="margin-top:8px"><button class="btn sm" id="resLocal">Restaurar esta copia</button><button class="btn sm ghost" id="olvLocal">Borrar la copia</button></span></span></div>` : ''}
       ${versiones ? (versiones.length ? `<ul class="cu-vers">${versiones.map((v) => `<li><span><b>Versión ${v.version}</b><span class="small muted">${esc(fechaHora(v.guardado_en))}${v.dispositivo ? ` · ${esc(v.dispositivo)}` : ''}</span></span><button class="btn sm" data-ver="${v.id}" data-n="${v.version}">Restaurar</button></li>`).join('')}</ul>` : '<p class="small muted">Aún no hay versiones anteriores.</p>') : ''}
     </div>
     <div class="card">
@@ -195,6 +197,15 @@ export function render(main) {
     if (!op) return;
     try { await nube.eliminarCuenta(); limpiarDispositivo(); location.hash = '#/inicio'; toast('Tu cuenta y tus datos se eliminaron', icon('check-circle')); }
     catch (e) { toast(e.message, icon('alert')); render(main); }
+  });
+  $('#resLocal', main)?.addEventListener('click', async () => {
+    if (!(await confirmar({ titulo: '¿Restaurar la copia de este dispositivo?', accion: 'Restaurar copia', escribir: 'RESTAURAR',
+      efectos: ['Tus datos actuales se reemplazan por la copia.', 'Lo que hay ahora en la nube queda en el historial de versiones.'] }))) return;
+    restaurarRespaldoLocal(); toast('Restauramos la copia de este dispositivo', icon('history')); render(main);
+  });
+  $('#olvLocal', main)?.addEventListener('click', async () => {
+    if (!(await confirmar({ titulo: '¿Borrar la copia de este dispositivo?', accion: 'Borrar copia', escribir: 'BORRAR', efectos: ['Ya no podrás recuperar esos datos.', 'No se puede deshacer.'] }))) return;
+    olvidarRespaldoLocal(); render(main);
   });
   $('#borrarNube', main)?.addEventListener('click', async () => {
     if (!(await confirmar({ titulo: '¿Borrar tus datos de la nube?', accion: 'Borrar de la nube', escribir: 'BORRAR',
