@@ -181,9 +181,9 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
   });
   f.addEventListener('submit', async (ev) => {
     ev.preventDefault(); leer();
-    if (draft.tipo !== 'transferencia') delete draft.cuentaDestino; // no dejar una cuenta destino de cuando era transferencia
     if (!(draft.monto > 0)) { $('#hintMonto', d).textContent = 'Escribe un monto mayor a cero.'; f.monto.focus(); return; }
     if (draft.tipo === 'transferencia' && !draft.cuentaDestino) { toast('Agrega otra cuenta en Ajustes para transferir'); return; }
+    if (draft.tipo !== 'transferencia') delete draft.cuentaDestino; // no dejar una cuenta destino de cuando era transferencia
     const sim = calcular({ ...getEstado(), movimientos: [...getEstado().movimientos.filter((m) => m.id !== draft.id), draft] }, hoyISO());
     const c = sim.cuentas.find((x) => x.id === draft.cuenta);
     if (draft.tipo !== 'entrada' && c && !c.esDeuda && c.saldo < 0 && !confirmarNegativo) { confirmarNegativo = true; pintarPreview(); return; }

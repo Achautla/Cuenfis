@@ -59,7 +59,7 @@ export function calcular(estado, hoy) {
       const ivaRet = suma(cobros, (m) => m.d.ivaRet);
       // Entradas del mes que NO se suman a la declaración: "Otro ingreso" o cobros con fecha fuera del régimen
       const noSumadas = activo ? delMes.filter((m) => m.tipo === 'entrada' && !(m.d.fiscal && m.d.regimen === 'resico')
-        && (m.d.clase === 'libre' || (m.d.regimen === 'resico' && !m.d.fiscal))) : [];
+        && ((m.d.clase === 'libre' && vigente(perfil, 'resico', m.fecha)) || (m.d.regimen === 'resico' && !m.d.fiscal))) : [];
       const gastosAct = delMes.filter((m) => m.tipo === 'salida' && m.d.clase === 'actividad');
       const ivaAcred = activo ? suma(gastosAct, (m) => m.d.ivaAcreditable) : 0;
       const ivaNeto = r2(ivaTrasladado - ivaRet - ivaAcred);

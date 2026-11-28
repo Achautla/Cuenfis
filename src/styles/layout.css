@@ -120,6 +120,6 @@
 /* Con el teclado abierto: sin barra inferior ni botón flotante, para que se vea lo que escribes */
 @media (max-width: 899px) {
   .teclado .sidebar, .teclado .fab { display: none !important; }
-  .teclado .main { padding-bottom: 24px; }
+  .teclado #main { padding-bottom: 24px; }
   .teclado .ia-caja { bottom: 0; }
 }

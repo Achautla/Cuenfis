@@ -223,7 +223,7 @@ function noSumadas(m, foto) {
   const movs = m.noSumadas.map((id) => foto.movs.find((x) => x.id === id)).filter(Boolean);
   return `<div class="notice warn decl-nosum">${icon('alert')}<span>
     <b>${movs.length === 1 ? 'Una entrada' : `${movs.length} entradas`} de ${esc(nombreMes(m.clave))} por ${money(m.noSumadasTotal)} no ${movs.length === 1 ? 'se suma' : 'se suman'} a esta declaración.</b>
-    Solo cuentan los movimientos con la categoría «Cobro RESICO» y con fecha dentro de tu régimen. Si alguna es un pago por tu trabajo o tus ventas, ábrela y cámbiala a Cobro RESICO. Si es un regalo, un préstamo o una venta personal ocasional, está bien como está.
+    Solo cuentan los movimientos con la categoría «Cobro RESICO» y con fecha dentro de tu régimen. Si alguna es un pago por tu trabajo o tus ventas, ábrela y cámbiala a Cobro RESICO; si dice «fecha fuera de tu régimen», corrige su fecha o la fecha de alta del régimen en Ajustes. Si es un regalo, un préstamo o una venta personal ocasional, está bien como está.
     <ul class="decl-nosum-lista">${movs.map((x) => `<li><span>${esc(fechaCorta(x.fecha))} · ${esc(x.nota || x.contraparte || categoria(x.categoria).nombre)}${x.d.regimen === 'resico' && !x.d.fiscal ? ' · <i>fecha fuera de tu régimen</i>' : ''}</span><b>${money(x.monto)}</b><button type="button" class="btn sm" data-revisar="${esc(x.id)}">Revisar</button></li>`).join('')}</ul>
   </span></div>`;
 }
