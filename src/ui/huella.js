@@ -19,15 +19,17 @@ const sesionGuardada = () => { try { const s = JSON.parse(localStorage.getItem('
 // Si una promesa se resuelve con él, JavaScript lo toma por promesa, llama a NativeBiometric.then()
 // (que no existe) y la espera nunca termina. Por eso se guarda el módulo y el plugin se toma de ahí.
 let modulo = null;
-async function bio() {
-  if (!nativo) return null;
+// Ojo también: una función async NO puede devolver el plugin (eso es resolver una promesa con él).
+// bio() devuelve el módulo y quien la llama toma .NativeBiometric después del await.
+function bio() {
+  if (!nativo) return Promise.resolve(null);
   modulo ??= import('@capgo/capacitor-native-biometric').catch(() => null);
-  return (await modulo)?.NativeBiometric ?? null;
+  return modulo;
 }
 
 /** ¿Este teléfono tiene huella (o rostro) configurada? */
 export async function disponible() {
-  const b = await bio();
+  const b = (await bio())?.NativeBiometric;
   if (!b) return false;
   try { return (await b.isAvailable({ useFallback: true })).isAvailable; } catch { return false; }
 }
@@ -35,7 +37,7 @@ export async function disponible() {
 export const activa = () => nativo && leer();
 
 async function verificar(motivo) {
-  const b = await bio();
+  const b = (await bio())?.NativeBiometric;
   if (!b) return false;
   try {
     await b.verifyIdentity({ title: 'Entrar a Cuenfis', subtitle: motivo, negativeButtonText: 'Cancelar', useFallback: true, maxAttempts: 5 });
