@@ -1,8 +1,10 @@
 import { getEstado, getFoto } from '../data/store.js';
 import { recordatorios } from '../core/recordatorios.js';
 import * as notif from '../ui/notificaciones.js';
+import { nativo } from '../native.js';
 import { icon } from '../ui/icons.js';
 import { $, esc, fechaLarga, toast } from '../ui/dom.js';
+import { sonar } from '../ui/sonidos.js';
 import '../styles/views/avisos.css';
 
 const ICONO = { declaracion: 'file', deudas: 'credit-card', recurrentes: 'clock', clientes: 'receipt', presupuestos: 'target' };
@@ -30,11 +32,13 @@ export function render(main) {
     <p class="disclaimer">Fechas según las reglas generales del SAT y de tu banco. Si un día límite cae en fin de semana o día inhábil, suele recorrerse al siguiente día hábil.</p>
   </section>`;
 
-  $('#tgl', main)?.addEventListener('click', async () => {
-    if (on) { notif.desactivar(); toast('Avisos desactivados en este dispositivo', icon('bell')); render(main); return; }
+  $('#tgl', main)?.addEventListener('click', async (ev) => {
+    ev.currentTarget.disabled = true;
+    if (on) { await notif.desactivar(); toast('Avisos desactivados en este dispositivo', icon('bell')); render(main); return; }
     const r = await notif.activar();
-    toast(r === 'granted' ? 'Avisos activados' : 'No se activaron los avisos. Puedes intentarlo después.', icon('bell'));
-    if (r === 'granted') notif.revisar(estado, foto);
+    if (r === 'granted') { await notif.revisar(estado, foto); sonar('cambio'); toast('Avisos activados', icon('bell')); }
+    else if (r === 'denied') toast(nativo ? 'El teléfono no dio permiso. Actívalo en Ajustes del teléfono > Apps > Cuenfis > Notificaciones.' : 'El navegador no dio permiso para avisar.', icon('bell'));
+    else toast(`No pudimos activar los avisos${notif.ultimoError ? ` (${notif.ultimoError})` : ''}. Intenta de nuevo.`, icon('alert'));
     render(main);
   });
 }

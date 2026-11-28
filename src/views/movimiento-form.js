@@ -10,6 +10,7 @@ import { $, $$, esc, money, hoyISO, toast, fechaLarga, nombreMes } from '../ui/d
 import { confirmar } from '../ui/confirmar.js';
 import { desgloseHTML, detalleTexto, chipsFiscales } from './comun.js';
 import { cruceDeUmbral } from '../core/presupuestos.js';
+import { sonar, sonarMovimiento } from '../ui/sonidos.js';
 import { ym } from '../core/motor.js';
 import '../styles/views/movimiento-form.css';
 
@@ -197,7 +198,7 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     if (mov.recurrente) efectos.push('Viene de un recurrente; esa fecha no volverá a pedirse.');
     efectos.push('Se recalculan tus saldos, impuestos y presupuestos.');
     if (!(await confirmar({ titulo: '¿Borrar este movimiento?', accion: 'Borrar movimiento', efectos }))) return;
-    aplicar((s) => borrarMovimiento(s, draft.id)); borrarFoto(draft.id); cerrar(); toast('Movimiento borrado', icon('trash'));
+    aplicar((s) => borrarMovimiento(s, draft.id)); borrarFoto(draft.id); cerrar(); sonar('borrar'); toast('Movimiento borrado', icon('trash'));
   };
   let formaManual = !!mov;
   f.addEventListener('change', (ev) => {
@@ -246,7 +247,7 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
         frecuencia: repetir, dia: +fecha.slice(8, 10), desde: fecha, hechas: [repetir === 'quincenal' ? quincenaDe(fecha) : fecha], plantilla }));
     }
     cerrar();
-    if (!mov && repetir) { toast('Guardado. Lo verás en Recurrentes para confirmarlo cada vez.', icon('clock')); return; }
+    if (!mov && repetir) { sonarMovimiento(draft.tipo, false); toast('Guardado. Lo verás en Recurrentes para confirmarlo cada vez.', icon('clock')); return; }
     avisoAlGuardar(antes, getFoto(), draft, !!mov);
   });
 
@@ -316,6 +317,9 @@ document.addEventListener('click', (ev) => {
 /** Impuestos al momento y alertas de presupuesto, justo después de guardar. */
 function avisoAlGuardar(antes, despues, draft, edicion) {
   const m = despues.movs.find((x) => x.id === draft.id);
+  const cruce0 = m?.tipo === 'salida' ? cruceDeUmbral(antes, despues, getEstado().presupuestos, ym(m.fecha), m.categoria) : null;
+  // Si se pasó del presupuesto suena el aviso (grave y suave); si no, el sonido del tipo de movimiento
+  if (cruce0) sonar('aviso'); else sonarMovimiento(draft.tipo, edicion);
   if (m?.tipo === 'entrada' && m.d.fiscal && m.d.regimen === 'resico' && m.delSat > 0) {
     toast(`Guardado. Aparta ${money(m.delSat)} para el SAT: es el ISR y el IVA de este cobro.`, icon('landmark'));
     return;

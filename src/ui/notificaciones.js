@@ -12,34 +12,59 @@ export const activas = () => (nativo ? pref() : soportadas() && Notification.per
 /** ¿El usuario bloqueó los avisos en el navegador? En Android (WebView) no existe Notification: el permiso lo pide la app. */
 export const bloqueadas = () => !nativo && 'Notification' in window && Notification.permission === 'denied';
 
-const LN = () => import('@capacitor/local-notifications').then((m) => m.LocalNotifications);
+// El plugin es un Proxy que responde a "then": nunca se debe resolver una promesa con él (si no,
+// JavaScript llama a LocalNotifications.then(), que no existe, y todo se queda esperando con un error
+// suelto en pantalla). Por eso LN() da el módulo y se usa .LocalNotifications.
+const LN = () => import('@capacitor/local-notifications');
 const idNum = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h) % 2_000_000_000; };
 
 // En Android, tocar una notificación lleva a su pantalla
-if (nativo) LN().then((ln) => ln.addListener('localNotificationActionPerformed', (a) => { const r = a.notification?.extra?.ruta; if (r) location.hash = `#/${r}`; })).catch(() => {});
+if (nativo) (async () => {
+  try { await (await LN()).LocalNotifications.addListener('localNotificationActionPerformed', (a) => { const r = a.notification?.extra?.ruta; if (r) location.hash = `#/${r}`; }); }
+  catch (e) { console.error('avisos: escuchar toques', e); }
+})();
 
+/** Último error de avisos, para mostrarlo en la pantalla de Avisos y poder diagnosticarlo. */
+export let ultimoError = null;
+const guardarPref = (v) => { try { localStorage.setItem(PREF, v); } catch { /* */ } };
+
+/**
+ * Pide permiso para avisar. Devuelve 'granted', 'denied', 'no-soportado' o 'error'.
+ * Android 13 o más pide el permiso de notificaciones (POST_NOTIFICATIONS); antes viene concedido.
+ * Si el usuario lo negó dos veces, Android ya no muestra la pregunta: hay que activarlo en Ajustes del teléfono.
+ */
 export async function activar() {
-  if (nativo) {
-    const ln = await LN();
-    const p = (await ln.checkPermissions()).display === 'granted' ? 'granted' : (await ln.requestPermissions()).display;
-    if (p === 'granted') localStorage.setItem(PREF, '1');
-    return p === 'granted' ? 'granted' : 'denied';
+  ultimoError = null;
+  try {
+    if (nativo) {
+      const { LocalNotifications: ln } = await LN();
+      let p = (await ln.checkPermissions()).display;
+      if (p !== 'granted') p = (await ln.requestPermissions()).display;
+      if (p === 'granted') guardarPref('1');
+      return p === 'granted' ? 'granted' : 'denied';
+    }
+    if (!soportadas()) return 'no-soportado';
+    const p = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
+    if (p === 'granted') guardarPref('1');
+    return p;
+  } catch (e) {
+    ultimoError = String(e?.message ?? e).slice(0, 160);
+    console.error('avisos: activar', e);
+    return 'error';
   }
-  if (!soportadas()) return 'no-soportado';
-  const p = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
-  if (p === 'granted') localStorage.setItem(PREF, '1');
-  return p;
 }
 export async function desactivar() {
-  localStorage.setItem(PREF, '0');
-  if (nativo) { const ln = await LN(); const { notifications } = await ln.getPending(); if (notifications.length) await ln.cancel({ notifications }); }
+  guardarPref('0');
+  try {
+    if (nativo) { const { LocalNotifications: ln } = await LN(); const { notifications } = await ln.getPending(); if (notifications.length) await ln.cancel({ notifications: notifications.map((n) => ({ id: n.id })) }); }
+  } catch (e) { console.error('avisos: desactivar', e); }
 }
 
 /** Android: programa los avisos aunque la app esté cerrada (a las 9:00 de su fecha, o en unos segundos si ya toca hoy). */
 async function programarNativo(lista, ya, hoy) {
-  const ln = await LN();
+  const { LocalNotifications: ln } = await LN();
   const { notifications: pend } = await ln.getPending();
-  if (pend.length) await ln.cancel({ notifications: pend });
+  if (pend.length) await ln.cancel({ notifications: pend.map((n) => ({ id: n.id })) });
   const ahora = Date.now();
   const nuevas = [];
   for (const r of lista) {
@@ -53,7 +78,12 @@ async function programarNativo(lista, ya, hoy) {
   if (nuevas.length) await ln.schedule({ notifications: nuevas.slice(0, 20) });
 }
 
+/** Programa o muestra los avisos pendientes. Nunca lanza: un fallo aquí no debe romper la pantalla. */
 export async function revisar(estado, foto) {
+  try { await revisarSinProteger(estado, foto); }
+  catch (e) { ultimoError = String(e?.message ?? e).slice(0, 160); console.error('avisos: revisar', e); }
+}
+async function revisarSinProteger(estado, foto) {
   if (!activas() || !estado.perfil) return;
   const hoy = foto.hoy;
   let ya = {};
@@ -95,8 +125,10 @@ export async function avisarNoticias(lista) {
   const nuevas = lista.filter((n) => !n.leida && !ya.includes(n.id)).slice(0, 2);
   if (!nuevas.length) return;
   if (nativo) {
-    const ln = await LN();
-    await ln.schedule({ notifications: nuevas.map((n) => ({ id: idNum(`not-${n.id}`), title: n.titulo, body: n.resumen.slice(0, 140), schedule: { at: new Date(Date.now() + 2000) }, extra: { ruta: 'noticias' } })) });
+    try {
+      const { LocalNotifications: ln } = await LN();
+      await ln.schedule({ notifications: nuevas.map((n) => ({ id: idNum(`not-${n.id}`), title: n.titulo, body: n.resumen.slice(0, 140), schedule: { at: new Date(Date.now() + 2000) }, extra: { ruta: 'noticias' } })) });
+    } catch (e) { console.error('avisos: noticias', e); return; }
   } else {
     const reg = await navigator.serviceWorker?.getRegistration?.().catch(() => null);
     for (const n of nuevas) {

@@ -133,3 +133,32 @@ describe('Colegiaturas: tope por alumno y nivel', () => {
     expect(d.aplicables.colegiaturas).toBe(P.deducciones.colegiaturas.primaria + P.deducciones.colegiaturas.bachillerato);
   });
 });
+
+describe('Sonidos', () => {
+  it('preferencias por defecto, se guardan y sonar nunca lanza sin audio', async () => {
+    const s = await import('../src/ui/sonidos.js');
+    expect(s.preferencias()).toMatchObject({ activo: true, estilo: 'gota' });
+    expect(s.guardar({ estilo: 'nada', volumen: 5 })).toMatchObject({ volumen: 1 });
+    expect(s.preferencias().estilo).toBe('gota');
+    expect(await s.sonar('entrada')).toBe(false); // sin AudioContext en las pruebas
+    expect(await s.sonar('no-existe')).toBe(false);
+    expect(Object.keys(s.EVENTOS)).toEqual(expect.arrayContaining(['sesion', 'entrada', 'salida', 'transferencia', 'borrar', 'aviso']));
+  });
+});
+
+// Los plugins de Capacitor son Proxy que responden a "then": resolver una promesa con uno
+// hace que JavaScript llame a Plugin.then() (no existe) y la espera nunca termina (falla de Avisos en Android).
+describe('plugins nativos', () => {
+  it('ninguna promesa se resuelve con un plugin de Capacitor', async () => {
+    const { readFileSync, readdirSync } = await import('node:fs');
+    const malos = [];
+    const recorrer = (d) => { for (const e of readdirSync(new URL(d, import.meta.url), { withFileTypes: true })) {
+      const r = `${d}${e.name}${e.isDirectory() ? '/' : ''}`;
+      if (e.isDirectory()) recorrer(r); else if (r.endsWith('.js')) {
+        const s = readFileSync(new URL(r, import.meta.url), 'utf8');
+        if (/import\(['"]@cap[^'"]+['"]\)\s*\.then\(\s*\(?\s*\w+\s*\)?\s*=>\s*\w+\.[A-Z]\w+\s*\)/.test(s)) malos.push(r);
+      } } };
+    recorrer('../src/');
+    expect(malos).toEqual([]);
+  });
+});

@@ -4,6 +4,7 @@ import { nativo } from '../native.js';
 import * as nube from '../data/nube.js';
 import { icon } from './icons.js';
 import { esc } from './dom.js';
+import { sonar } from './sonidos.js';
 import { ojitos } from './contrasena.js';
 
 const PREF = 'cuenfis:huella';
@@ -14,11 +15,14 @@ const fijar = (v) => { try { v ? localStorage.setItem(PREF, '1') : localStorage.
 const haySesion = () => { try { return !!localStorage.getItem('cuenfis:auth'); } catch { return false; } };
 const sesionGuardada = () => { try { const s = JSON.parse(localStorage.getItem('cuenfis:auth')); return { id: s?.user?.id ?? null, email: s?.user?.email ?? '' }; } catch { return { id: null, email: '' }; } };
 
-let plugin = null;
+// Ojo: el plugin de Capacitor es un Proxy que responde a cualquier método, incluido "then".
+// Si una promesa se resuelve con él, JavaScript lo toma por promesa, llama a NativeBiometric.then()
+// (que no existe) y la espera nunca termina. Por eso se guarda el módulo y el plugin se toma de ahí.
+let modulo = null;
 async function bio() {
   if (!nativo) return null;
-  plugin ??= import('@capgo/capacitor-native-biometric').then((m) => m.NativeBiometric).catch(() => null);
-  return plugin;
+  modulo ??= import('@capgo/capacitor-native-biometric').catch(() => null);
+  return (await modulo)?.NativeBiometric ?? null;
 }
 
 /** ¿Este teléfono tiene huella (o rostro) configurada? */
@@ -83,7 +87,7 @@ export function bloquear() {
   resto.forEach((el) => el.setAttribute('inert', ''));
   ojitos(capa);
   const abrir = () => { capa.remove(); bloqueada = false; document.documentElement.classList.remove('con-candado'); resto.forEach((el) => el.removeAttribute('inert')); };
-  const pedir = async () => { if (await verificar('Usa tu huella para entrar')) abrir(); };
+  const pedir = async () => { if (await verificar('Usa tu huella para entrar')) { abrir(); sonar('sesion'); } };
   capa.querySelector('#cdHuella').onclick = pedir;
   capa.querySelector('#cdPass').onclick = () => { capa.querySelector('#cdForm').hidden = false; capa.querySelector('#cdPass').hidden = true; capa.querySelector('#cdForm input[name="p"]').focus(); };
   capa.querySelector('#cdForm').onsubmit = async (ev) => {
@@ -94,7 +98,7 @@ export function bloquear() {
       const u = await nube.entrar(email || f.email.value.trim(), f.p.value);
       // Solo la misma cuenta desbloquea: con otra cuenta se cierra esa sesión y sigue bloqueado
       if (previo.id && u?.id !== previo.id) { await nube.sb?.auth.signOut({ scope: 'local' }).catch(() => {}); err.textContent = 'Esa no es la cuenta de este teléfono.'; return; }
-      abrir();
+      abrir(); sonar('sesion');
     } catch (e) { err.textContent = e.message || 'No pudimos entrar. Revisa tu contraseña.'; }
   };
   setTimeout(pedir, 300);

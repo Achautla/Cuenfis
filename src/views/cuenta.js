@@ -10,6 +10,7 @@ import { ojitos } from '../ui/contrasena.js';
 import * as conv from '../ia/conversacion.js';
 import { borrarTodas as borrarFotos } from '../data/fotos.js';
 import * as huella from '../ui/huella.js';
+import { sonar } from '../ui/sonidos.js';
 import { nativo } from '../native.js';
 import '../styles/views/cuenta.css';
 
@@ -150,7 +151,7 @@ export function render(main) {
     if (modo === 'crear' && !fa.acepto.checked) { err.textContent = 'Para crear tu cuenta necesitamos que aceptes el aviso de privacidad y los términos.'; fa.acepto.focus(); return; }
     ocupado = true; err.textContent = '';
     try {
-      if (modo === 'entrar') { await nube.entrar(email, p); ocupado = false; await trasEntrar(main); return; }
+      if (modo === 'entrar') { await nube.entrar(email, p); ocupado = false; sonar('sesion'); await trasEntrar(main); return; }
       if (modo === 'crear') {
         const r = await nube.registrarse(email, p);
         try { localStorage.setItem('cuenfis:consentimiento', VERSION_LEGAL); } catch { /* */ }
