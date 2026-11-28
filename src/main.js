@@ -139,7 +139,13 @@ function render() {
   if (!iaTop.innerHTML) iaTop.innerHTML = icon('sparkle');
   setTimeout(preguntarSiHaceFalta, 600);
   document.title = `${RUTAS[r].t} · Cuenfis`;
-  RUTAS[r].v.render(main);
+  try {
+    RUTAS[r].v.render(main);
+  } catch (err) {
+    // Una pantalla con error no debe dejarte en la anterior sin decir nada
+    console.error(err);
+    main.innerHTML = `<section class="view"><div class="card empty">${icon('alert')}<p>No pudimos mostrar ${esc(RUTAS[r].t)}. Tus datos están a salvo. Intenta de nuevo o vuelve a <a href="#/inicio">Inicio</a>.</p></div></section>`;
+  }
   // Tablas con desplazamiento horizontal: alcanzables con teclado
   main.querySelectorAll('.table-wrap').forEach((t) => { t.tabIndex = 0; t.setAttribute('role', 'region'); t.setAttribute('aria-label', 'Tabla, desliza para ver más'); });
 }

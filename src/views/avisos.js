@@ -11,7 +11,7 @@ export function render(main) {
   const estado = getEstado(), foto = getFoto();
   const lista = recordatorios(estado, foto);
   const sop = notif.soportadas(), on = notif.activas();
-  const bloqueadas = sop && Notification.permission === 'denied';
+  const bloqueadas = notif.bloqueadas();
 
   main.innerHTML = `<section class="view avisos">
     <div class="page-head"><div><h1>Avisos</h1><p class="sub">Lo que conviene atender pronto, según tu régimen y tus datos.</p></div></div>

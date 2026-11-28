@@ -9,6 +9,8 @@ const pref = () => { try { return localStorage.getItem(PREF) === '1'; } catch { 
 
 export const soportadas = () => nativo || 'Notification' in window;
 export const activas = () => (nativo ? pref() : soportadas() && Notification.permission === 'granted' && pref());
+/** ¿El usuario bloqueó los avisos en el navegador? En Android (WebView) no existe Notification: el permiso lo pide la app. */
+export const bloqueadas = () => !nativo && 'Notification' in window && Notification.permission === 'denied';
 
 const LN = () => import('@capacitor/local-notifications').then((m) => m.LocalNotifications);
 const idNum = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h) % 2_000_000_000; };
