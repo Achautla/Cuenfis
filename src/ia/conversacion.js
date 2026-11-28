@@ -26,7 +26,7 @@ function cargar() {
 }
 function vacio() { return { vista: [], api: [], uso: null, modo: 'chat', demo: null, ocupado: false, error: null }; }
 function guardar() {
-  try { localStorage.setItem(CLAVE, JSON.stringify({ ...st, vista: st.vista.slice(-80), api: st.api.slice(-MAX_API * 2), ocupado: false, error: null })); } catch { /* sin espacio */ }
+  try { localStorage.setItem(CLAVE, JSON.stringify({ ...st, vista: st.vista.slice(-80), api: recortar(st.api, MAX_API * 2), ocupado: false, error: null })); } catch { /* sin espacio */ }
 }
 
 export const estado = () => st;
@@ -39,6 +39,14 @@ export function limpiarFotos() {
   return limpiarHuerfanas(getEstado().movimientos.map((m) => m.id), pendientes).catch(() => {});
 }
 export function marcarPropuesta(i, cambios) { st.vista[i] = { ...st.vista[i], ...cambios }; avisar(); }
+
+/** Los últimos mensajes, empezando siempre en una pregunta del usuario (nunca en resultados de herramientas sueltos). */
+const esPregunta = (m) => m.role === 'user' && (typeof m.content === 'string' || (Array.isArray(m.content) && m.content.some((b) => b.type === 'text' || b.type === 'image')));
+export function recortar(api, max = MAX_API) {
+  const out = api.slice(-max);
+  while (out.length && !esPregunta(out[0])) out.shift();
+  return out.length ? out : api.slice(-1);
+}
 
 const agregar = (x) => { st = { ...st, vista: [...st.vista, x] }; avisar(); };
 
@@ -77,12 +85,19 @@ async function llamar(cuerpo) {
 async function preguntarReal(texto, contenido = texto) {
   let api = [...st.api, { role: 'user', content: contenido }];
   for (let i = 0; i < MAX_VUELTAS; i++) {
-    const enviar = api.slice(-MAX_API);
-    while (enviar.length && enviar[0].role !== 'user') enviar.shift(); // debe empezar con el usuario
+    const enviar = recortar(api);
     const r = await llamar({ modo: st.modo, mensajes: enviar, contexto: contexto() });
     alEvento({ t: 'uso', uso: r.uso });
     api = [...api, { role: 'assistant', content: r.contenido }]; // sin cambios: así lo pide la API
     for (const b of r.contenido) if (b.type === 'text') alEvento({ t: 'texto', md: b.text });
+    if (r.parada !== 'tool_use') {
+      // Respuesta cortada (por ejemplo, max_tokens) a media llamada de herramienta: no dejar un tool_use sin resultado
+      const ult = api.at(-1);
+      if (Array.isArray(ult.content) && ult.content.some((b) => b.type === 'tool_use')) {
+        const limpio = ult.content.filter((b) => b.type !== 'tool_use');
+        api = [...api.slice(0, -1), ...(limpio.length ? [{ ...ult, content: limpio }] : [{ role: 'assistant', content: [{ type: 'text', text: '(respuesta incompleta)' }] }])];
+      }
+    }
     if (r.parada === 'refusal') { alEvento({ t: 'texto', md: 'No puedo ayudarte con eso. Pregúntame sobre tus finanzas o tus impuestos.' }); break; }
     if (r.parada !== 'tool_use') break;
     const resultados = [];

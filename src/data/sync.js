@@ -25,13 +25,22 @@ export function arrancar() {
     if (nube.getSync().fase === 'pendiente') subirAhora();
     else await revisarRemoto();
   });
+  // Al volver a la app, trae lo que otro dispositivo haya guardado (si aquí no hay cambios pendientes)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && nube.getUsuario() && nube.getSync().fase === 'al-dia' && !enCurso) revisarRemoto();
+  });
 }
 
 /** Al abrir la app: si otro dispositivo guardó algo más nuevo y aquí no hay cambios, lo trae. */
 async function revisarRemoto() {
   try {
+    const marca = cambiosDurante;
     const r = await nube.bajar();
-    if (r && r.version !== nube.versionLocal()) usarRemoto(r);
+    if (r && r.version !== nube.versionLocal()) {
+      // Si mientras bajaba se guardó algo aquí, no lo pisamos: el usuario elige qué versión conservar
+      if (cambiosDurante !== marca || nube.getSync().fase === 'pendiente') { remotoEnConflicto = r; nube.fijarSync({ fase: 'conflicto' }); return; }
+      usarRemoto(r);
+    }
     else if (!r && getEstado().perfil) { nube.olvidarVersion(); await subirAhora(); } // la copia en la nube se borró desde otro dispositivo
     else nube.fijarSync({ fase: 'al-dia', en: new Date().toISOString() });
   } catch (e) { nube.fijarSync({ fase: 'sin-conexion', error: e.message }); }

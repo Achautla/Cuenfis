@@ -7,6 +7,8 @@ import { $, esc, toast } from '../ui/dom.js';
 import { VERSION_LEGAL, AVISO_SIMPLIFICADO } from '../legal/textos.js';
 import { descargar } from '../ui/dom.js';
 import { ojitos } from '../ui/contrasena.js';
+import * as conv from '../ia/conversacion.js';
+import { borrarTodas as borrarFotos } from '../data/fotos.js';
 import * as huella from '../ui/huella.js';
 import { nativo } from '../native.js';
 import '../styles/views/cuenta.css';
@@ -22,6 +24,14 @@ const FASES = {
 export const textoFase = (f) => FASES[f] ?? FASES.local;
 
 const fechaHora = (iso) => new Date(iso).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+
+/** Borra de este dispositivo todo lo personal: datos, conversación con el asistente, fotos y copias. */
+function limpiarDispositivo() {
+  reiniciar();
+  conv.borrar();
+  borrarFotos();
+  for (const k of ['cuenfis:asistente', 'cuenfis:noticias', 'cuenfis:noticias:leidas', 'cuenfis:noticias:ocultas', 'cuenfis:consentimiento']) { try { localStorage.removeItem(k); } catch { /* */ } }
+}
 
 async function trasEntrar(main) {
   // Registra el consentimiento expreso dado al crear la cuenta (o pendiente de una cuenta confirmada por correo)
@@ -169,7 +179,7 @@ export function render(main) {
     if (!op) return;
     huella.desactivar();
     await nube.salir();
-    if (op === true) { reiniciar(); location.hash = '#/inicio'; }
+    if (op === true) { limpiarDispositivo(); location.hash = '#/inicio'; }
     toast('Sesión cerrada', icon('logout'));
     render(main);
   });
@@ -183,7 +193,7 @@ export function render(main) {
     const op = await confirmar({ titulo: '¿Eliminar tu cuenta de Cuenfis?', accion: 'Eliminar cuenta', escribir: 'ELIMINAR',
       efectos: ['Se borran tu cuenta, tus datos en la nube, las 30 versiones guardadas y tus acuses.', 'No se puede deshacer. Descarga antes tus datos si los quieres conservar.', 'Los datos de este dispositivo también se borran.'] });
     if (!op) return;
-    try { await nube.eliminarCuenta(); reiniciar(); location.hash = '#/inicio'; toast('Tu cuenta y tus datos se eliminaron', icon('check-circle')); }
+    try { await nube.eliminarCuenta(); limpiarDispositivo(); location.hash = '#/inicio'; toast('Tu cuenta y tus datos se eliminaron', icon('check-circle')); }
     catch (e) { toast(e.message, icon('alert')); render(main); }
   });
   $('#borrarNube', main)?.addEventListener('click', async () => {

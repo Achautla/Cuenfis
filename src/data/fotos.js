@@ -29,6 +29,8 @@ async function tx(modo, fn) {
 export const guardarFoto = (id, blob) => tx('readwrite', (s) => s.put({ blob, en: new Date().toISOString() }, id));
 export const leerFoto = async (id) => { try { return (await tx('readonly', (s) => s.get(id)))?.blob ?? null; } catch { return null; } };
 export const borrarFoto = (id) => tx('readwrite', (s) => s.delete(id)).catch(() => {});
+/** Borra todas las fotos de este dispositivo (al cerrar sesión borrando los datos o al eliminar la cuenta). */
+export const borrarTodas = () => tx('readwrite', (s) => s.clear()).catch(() => {});
 export const idsFotos = async () => { try { return await tx('readonly', (s) => s.getAllKeys()); } catch { return []; } };
 
 /** Borra las fotos que ya no corresponden a ningún movimiento (propuestas descartadas o movimientos borrados). */

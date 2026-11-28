@@ -49,7 +49,9 @@ export function render(main) {
       <div class="card-head"><h2>Cuentas</h2></div>
       <p class="small muted" style="margin-bottom:10px">En una tarjeta de crédito o préstamo, el saldo es lo que debes: una compra lo aumenta y un pago lo baja. El límite, el día de corte y la tasa se capturan en <a href="#/deudas">Tarjetas y deudas</a>.</p>
       <div class="table-wrap"><table class="acc-table"><thead><tr><th>Nombre</th><th>Tipo</th><th class="n">Saldo inicial</th><th class="n">Saldo hoy</th><th></th></tr></thead><tbody>
-      ${foto.cuentas.map((c) => { const usada = e.movimientos.some((m) => m.cuenta === c.id || m.cuentaDestino === c.id); return `<tr data-cta="${esc(c.id)}">
+      ${foto.cuentas.map((c) => { const usada = e.movimientos.some((m) => m.cuenta === c.id || m.cuentaDestino === c.id)
+        || (e.recurrentes ?? []).some((r) => r.plantilla?.cuenta === c.id || r.plantilla?.cuentaDestino === c.id)
+        || (e.metas ?? []).some((m) => m.cuenta === c.id); return `<tr data-cta="${esc(c.id)}">
         <td><input name="nombre" value="${esc(c.nombre)}" aria-label="Nombre" /></td>
         <td><select name="tipo" aria-label="Tipo">${Object.entries(TIPOS_CUENTA).map(([k, t]) => `<option value="${k}" ${c.tipo === k ? 'selected' : ''}>${esc(t.nombre)}</option>`).join('')}</select></td>
         <td class="n"><input name="saldoInicial" type="number" step="0.01" value="${esc(c.saldoInicial)}" aria-label="Saldo inicial" /></td>

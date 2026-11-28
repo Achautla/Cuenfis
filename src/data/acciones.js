@@ -47,7 +47,11 @@ export function borrarRecurrente(estado, id) {
 export function confirmarRecurrente(estado, id, fecha, monto) {
   const rec = (estado.recurrentes ?? []).find((r) => r.id === id);
   if (!rec) return estado;
-  const conMov = agregarMovimiento(estado, { ...rec.plantilla, id: nuevoId(), fecha, monto: Number(monto ?? rec.plantilla.monto), recurrente: id });
+  const real = Number(monto ?? rec.plantilla.monto);
+  const plantilla = { ...rec.plantilla };
+  // Con otro monto, los datos fijos de la plantilla (ajuste de factura, sueldo bruto, ISR retenido) ya no aplican
+  if (Math.abs(real - Number(rec.plantilla.monto)) > 0.005) { delete plantilla.ajuste; delete plantilla.sueldoBruto; delete plantilla.isrRetenidoNomina; }
+  const conMov = agregarMovimiento(estado, { ...plantilla, id: nuevoId(), fecha, monto: real, recurrente: id });
   return { ...conMov, recurrentes: conMov.recurrentes.map((r) => (r.id === id ? { ...r, hechas: [...(r.hechas ?? []), fecha] } : r)) };
 }
 

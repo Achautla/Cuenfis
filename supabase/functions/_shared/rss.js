@@ -22,14 +22,17 @@ export const REGIMENES_OK = ['sueldos', 'resico', 'honorarios', 'arrendamiento',
 
 const ENTIDADES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
 
+// Un código de carácter inválido no debe tirar toda la fuente
+const caracter = (n) => (Number.isInteger(n) && n > 0 && n <= 0x10ffff && !(n >= 0xd800 && n <= 0xdfff) ? String.fromCodePoint(n) : '');
+
 /** Texto plano: sin CDATA, sin etiquetas, con entidades resueltas y espacios normalizados. */
 export function limpiarTexto(s) {
   let t = String(s ?? '').replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
   // Dos pasadas: algunos medios escapan el HTML dentro de la descripción
   for (let i = 0; i < 2; i++) {
     t = t.replace(/<[^>]*>/g, ' ')
-      .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(+n))
-      .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+      .replace(/&#(\d+);/g, (_, n) => caracter(+n))
+      .replace(/&#x([0-9a-f]+);/gi, (_, n) => caracter(parseInt(n, 16)))
       .replace(/&([a-z]+);/gi, (m, n) => ENTIDADES[n.toLowerCase()] ?? m);
   }
   return t.replace(/\s+/g, ' ').replace(/\s+([,.;:…!?)])/g, '$1').trim();
@@ -42,6 +45,7 @@ const campo = (item, tag) => {
 
 /** Fecha AAAA-MM-DD en hora del centro de México. */
 export function fechaMx(d) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(d ?? '').trim())) return String(d).trim(); // solo fecha: se queda igual
   const f = new Date(d);
   if (Number.isNaN(f.getTime())) return null;
   return new Date(f.getTime() - 6 * 3600e3).toISOString().slice(0, 10);
@@ -53,7 +57,9 @@ export function leerRss(xml, fuente) {
   const out = [];
   for (const b of bloques) {
     let titulo = campo(b, 'title');
-    let enlace = campo(b, 'link') || (b.match(/<link[^>]*href="([^"]+)"/i)?.[1] ?? '');
+    // Atom: el enlace al artículo es rel="alternate" (o sin rel); no el de una imagen adjunta
+    const atom = [...b.matchAll(/<link\b([^>]*)\/?>/gi)].map((x) => ({ rel: x[1].match(/rel="([^"]+)"/i)?.[1] ?? 'alternate', href: x[1].match(/href="([^"]+)"/i)?.[1] })).find((x) => x.href && x.rel === 'alternate')?.href;
+    let enlace = campo(b, 'link') || (atom ?? '');
     enlace = enlace.trim();
     const medio = campo(b, 'source'); // Google Noticias dice quién publicó
     if (medio && titulo.endsWith(` - ${medio}`)) titulo = titulo.slice(0, -(medio.length + 3));

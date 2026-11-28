@@ -15,13 +15,15 @@ export const temas = () => (Array.isArray(ia().temas) ? ia().temas.filter((t) =>
 const cambiar = (fn) => aplicar((s) => ({ ...s, preferencias: { ...s.preferencias, ia: fn({ ...(s.preferencias?.ia ?? {}) }) } }));
 
 // Nada de datos que identifiquen o den acceso: se rechazan antes de guardar
-const SENSIBLE = /\b[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}\b|\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d\b|\b\d{16}\b|\b\d{18}\b|contraseñ|password|\bnip\b|\bcvv\b/i;
+const SENSIBLE = /\b[A-ZÑ&]{3,4}\d{6}[A-Z\d]{3}\b|\b[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d\b|\d{13,19}|contrase(ñ|n)a|password|\bnip\b|\bpin\b|\bcvv\b|clave( del)? sat|\bciec\b|e\.?firma|\bclabe\b/i;
+// Las tarjetas y CLABE se escriben con espacios o guiones: se revisan también sin ellos
+const compacto = (t) => t.replace(/(?<=\d)[\s-](?=\d)/g, '').replace(/(?<=[A-Z\d])-(?=[A-Z\d])/gi, '');
 
 /** Limpia y valida un recuerdo. Devuelve el texto o lanza un error explicable. */
 export function limpiarRecuerdo(texto) {
   const t = String(texto ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_TEXTO);
   if (t.length < 3) throw new Error('Escribe algo más concreto.');
-  if (SENSIBLE.test(t)) throw new Error('No guardo RFC, CURP, cuentas, tarjetas ni contraseñas.');
+  if (SENSIBLE.test(t) || SENSIBLE.test(compacto(t))) throw new Error('No guardo RFC, CURP, cuentas, tarjetas ni contraseñas.');
   return t;
 }
 

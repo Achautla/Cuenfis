@@ -19,12 +19,20 @@ const TIPOS = { entrada: ['Entrada', 'arrow-down-left'], salida: ['Salida', 'arr
 function cerrar() { dlg().oncancel = null; dlg().close(); }
 
 /** Abre el formulario. `mov` existente = edición. */
+/** Quincena a la que pertenece una fecha: el 15 o el último día del mes. */
+function quincenaDe(fecha) {
+  const [y, m, d] = fecha.split('-').map(Number);
+  if (d <= 15) return `${fecha.slice(0, 8)}15`;
+  return `${fecha.slice(0, 8)}${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`;
+}
+const formaDeCuenta = (c, tipo) => (c?.tipo === 'efectivo' ? 'efectivo' : tipo === 'salida' && (c?.tipo === 'credito' || c?.tipo === 'debito') ? 'tarjeta' : 'transferencia');
+
 export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } = {}) {
   const estado = getEstado();
   const perfil = estado.perfil;
   const draft = mov ? structuredClone(mov) : {
     id: nuevoId(), tipo, fecha: hoyISO(), monto: '', cuenta: estado.cuentas.find((c) => c.tipo === 'debito')?.id ?? estado.cuentas[0]?.id,
-    formaPago: 'transferencia', pagador: 'pf', tasaIva: perfil?.frontera ? 0.08 : 0.16, cfdi: false, ...(preset ?? {}),
+    formaPago: formaDeCuenta(estado.cuentas.find((c) => c.tipo === 'debito') ?? estado.cuentas[0], tipo), pagador: 'pf', tasaIva: perfil?.frontera ? 0.08 : 0.16, cfdi: false, ...(preset ?? {}),
   };
   let repetir = '';
   let confirmarNegativo = false;
@@ -175,7 +183,16 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     if (!(await confirmar({ titulo: '¿Borrar este movimiento?', accion: 'Borrar movimiento', efectos }))) return;
     aplicar((s) => borrarMovimiento(s, draft.id)); borrarFoto(draft.id); cerrar(); toast('Movimiento borrado', icon('trash'));
   };
-  f.addEventListener('change', () => { sucio = true; });
+  let formaManual = !!mov;
+  f.addEventListener('change', (ev) => {
+    sucio = true;
+    if (ev.target.name === 'formaPago') formaManual = true;
+    // Al cambiar la cuenta, la forma de pago la sigue (efectivo, tarjeta...), salvo que el usuario la haya elegido
+    if (ev.target.name === 'cuenta' && !formaManual) {
+      draft.formaPago = formaDeCuenta(getEstado().cuentas.find((c) => c.id === ev.target.value), draft.tipo);
+      const sel = f.querySelector('[name=formaPago]'); if (sel) sel.value = draft.formaPago;
+    }
+  });
   f.addEventListener('input', (ev) => {
     sucio = true;
     const n = ev.target.name; leer();
@@ -192,6 +209,8 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     const c = sim.cuentas.find((x) => x.id === draft.cuenta);
     if (draft.tipo !== 'entrada' && c && !c.esDeuda && c.saldo < 0 && !confirmarNegativo) { confirmarNegativo = true; pintarPreview(); return; }
     const limpio = Object.fromEntries(Object.entries(draft).filter(([, v]) => v !== undefined && v !== ''));
+    const igual = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+    if (mov && Object.keys({ ...mov, ...limpio }).filter((k) => !['historial'].includes(k)).every((k) => igual(mov[k], limpio[k]))) { cerrar(); return; }
     // Candado: cambiar un mes ya declarado
     const decls = getEstado().declaraciones ?? {};
     const fiscal = (x) => x && (categoria(x.categoria).reg || categoria(x.categoria).clase === 'actividad');
@@ -207,7 +226,7 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     if (!mov && repetir) {
       const { id, fecha, historial, uuid, ...plantilla } = limpio;
       aplicar((s) => guardarRecurrente(s, { nombre: limpio.nota || limpio.contraparte || (limpio.categoria ? categoria(limpio.categoria).nombre : 'Transferencia'),
-        frecuencia: repetir, dia: +fecha.slice(8, 10), desde: fecha, hechas: [fecha], plantilla }));
+        frecuencia: repetir, dia: +fecha.slice(8, 10), desde: fecha, hechas: [repetir === 'quincenal' ? quincenaDe(fecha) : fecha], plantilla }));
     }
     cerrar();
     if (!mov && repetir) { toast('Guardado. Lo verás en Recurrentes para confirmarlo cada vez.', icon('clock')); return; }
@@ -226,7 +245,7 @@ export function abrirDetalle(id) {
   const cat = m.tipo === 'transferencia' ? { nombre: 'Transferencia', icono: 'swap', color: '#475569' } : categoria(m.categoria);
   const d = dlg();
   const filas = detalleTexto(m).map(([k, v]) => `<div class="ln"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('');
-  const hist = (m.historial ?? []).map((h) => `<li>${esc(h.accion === 'creado' ? 'Creado' : 'Editado')} el ${esc(fechaLarga(h.en.slice(0, 10)))}${h.antes && Object.keys(h.antes).length ? ` <span class="muted">(antes: ${esc(Object.entries(h.antes).map(([k, v]) => `${k} ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(', '))})</span>` : ''}</li>`).join('');
+  const hist = (m.historial ?? []).map((h) => `<li>${esc(h.accion === 'creado' ? 'Creado' : 'Editado')} el ${esc(new Date(h.en).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }))}${h.antes && Object.keys(h.antes).length ? ` <span class="muted">(antes: ${esc(Object.entries(h.antes).map(([k, v]) => `${k} ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(', '))})</span>` : ''}</li>`).join('');
   d.innerHTML = `<div class="dlg-head"><span class="avatar" style="background:${cat.color}">${icon(cat.icono)}</span><h2>${esc(m.nota || m.contraparte || cat.nombre)}</h2>
       <button type="button" class="btn ghost icon" data-x aria-label="Cerrar">${icon('x')}</button></div>
     <div class="dlg-body detail">

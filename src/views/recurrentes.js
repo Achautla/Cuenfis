@@ -38,7 +38,7 @@ export function render(main) {
   const pend = pendientesRecurrentes(estado, foto.hoy);
   const recs = estado.recurrentes ?? [];
   const r = recs.find((x) => x.id === editando);
-  const mensual = (x) => (x.plantilla.tipo === 'salida' ? -1 : 1) * x.plantilla.monto * ({ mensual: 1, quincenal: 2, semanal: 52 / 12 })[x.frecuencia];
+  const mensual = (x) => (x.plantilla.tipo === 'transferencia' ? 0 : x.plantilla.tipo === 'salida' ? -1 : 1) * x.plantilla.monto * ({ mensual: 1, quincenal: 2, semanal: 52 / 12 })[x.frecuencia];
   const activos = recs.filter((x) => !x.pausado);
   const fijosSal = -activos.filter((x) => x.plantilla.tipo === 'salida').reduce((s, x) => s + mensual(x), 0);
   const fijosEnt = activos.filter((x) => x.plantilla.tipo === 'entrada').reduce((s, x) => s + mensual(x), 0);
@@ -85,8 +85,14 @@ export function render(main) {
     ev.preventDefault();
     const d = new FormData(f);
     const cat = categoria(d.get('categoria'));
-    const plantilla = { tipo: d.get('tipo'), categoria: d.get('categoria'), monto: Number(d.get('monto')), cuenta: d.get('cuenta'),
-      formaPago: 'transferencia', nota: d.get('nombre').trim(), ...(cat.clase === 'ingreso' ? { cfdi: true, tasaIva: foto.perfil.frontera ? 0.08 : 0.16, pagador: d.get('pagador') } : {}) };
+    const esTransf = r?.plantilla.tipo === 'transferencia';
+    // Una transferencia (por ejemplo, pagar la tarjeta) conserva su tipo y su cuenta destino: solo cambian nombre, monto y cuenta
+    const plantilla = esTransf
+      ? { ...r.plantilla, monto: Number(d.get('monto')), cuenta: d.get('cuenta'), nota: d.get('nombre').trim() }
+      : { ...(r && r.plantilla.tipo === d.get('tipo') && r.plantilla.categoria === d.get('categoria') ? r.plantilla : {}),
+        tipo: d.get('tipo'), categoria: d.get('categoria'), monto: Number(d.get('monto')), cuenta: d.get('cuenta'),
+        formaPago: r?.plantilla.formaPago ?? 'transferencia', nota: d.get('nombre').trim(), ...(cat.clase === 'ingreso' ? { cfdi: true, tasaIva: foto.perfil.frontera ? 0.08 : 0.16, pagador: d.get('pagador') } : {}) };
+    if (esTransf && plantilla.cuenta === plantilla.cuentaDestino) { toast('La cuenta de origen y la de destino deben ser distintas', icon('alert')); return; }
     if (!(plantilla.monto > 0)) { toast('Escribe un monto mayor a cero', icon('alert')); return; }
     const desde = d.get('desde');
     aplicar((s) => guardarRecurrente(s, { ...(r ?? { id: nuevoId() }), nombre: d.get('nombre').trim(), frecuencia: d.get('frecuencia'), dia: +desde.slice(8, 10), desde, plantilla }));
@@ -110,7 +116,12 @@ export function render(main) {
   main.querySelectorAll('.rec-list li').forEach((li) => {
     const id = li.dataset.id;
     li.querySelector('[data-edit]').onclick = () => { editando = id; render(main); $('#fRec', main).scrollIntoView({ behavior: 'smooth' }); };
-    li.querySelector('[data-pausa]').onclick = () => { const x = recs.find((y) => y.id === id); aplicar((s) => guardarRecurrente(s, { id, pausado: !x.pausado })); };
+    li.querySelector('[data-pausa]').onclick = () => {
+      const x = recs.find((y) => y.id === id);
+      // Al reanudar, las fechas que pasaron durante la pausa no se piden: cuentan como omitidas
+      const saltadas = x.pausado ? pendientesRecurrentes({ recurrentes: [{ ...x, pausado: false }] }, foto.hoy).map((p) => p.fecha) : [];
+      aplicar((s) => guardarRecurrente(s, { id, pausado: !x.pausado, ...(saltadas.length ? { hechas: [...(x.hechas ?? []), ...saltadas] } : {}) }));
+    };
     li.querySelector('[data-del]').onclick = async () => {
       const x = recs.find((y) => y.id === id);
       if (!(await confirmar({ titulo: `¿Borrar el recurrente ${x.nombre}?`, accion: 'Borrar recurrente', efectos: ['Ya no te pediremos confirmarlo.', 'Los movimientos que ya registraste con él se quedan.', 'Si solo quieres detenerlo un tiempo, usa Pausar.'] }))) return;
