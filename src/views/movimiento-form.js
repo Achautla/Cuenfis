@@ -1,6 +1,6 @@
 // Captura, detalle y edición de movimientos.
-import { CATEGORIAS, categoria, FORMAS_PAGO, PAGADORES } from '../data/catalogo.js';
-import { categoriasDisponibles } from '../core/regimen.js';
+import { CATEGORIAS, categoria, FORMAS_PAGO, PAGADORES, ORIGENES_LIBRE, NIVELES_COLEGIATURA } from '../data/catalogo.js';
+import { categoriasDisponibles, categoriaDeCobro } from '../core/regimen.js';
 import { calcular } from '../core/motor.js';
 import { leerFoto, guardarFoto, borrarFoto } from '../data/fotos.js';
 import { agregarMovimiento, editarMovimiento, borrarMovimiento, guardarRecurrente, nuevoId } from '../data/acciones.js';
@@ -19,12 +19,20 @@ const TIPOS = { entrada: ['Entrada', 'arrow-down-left'], salida: ['Salida', 'arr
 function cerrar() { dlg().oncancel = null; dlg().close(); }
 
 /** Abre el formulario. `mov` existente = edición. */
+/** Quincena a la que pertenece una fecha: el 15 o el último día del mes. */
+function quincenaDe(fecha) {
+  const [y, m, d] = fecha.split('-').map(Number);
+  if (d <= 15) return `${fecha.slice(0, 8)}15`;
+  return `${fecha.slice(0, 8)}${String(new Date(Date.UTC(y, m, 0)).getUTCDate()).padStart(2, '0')}`;
+}
+const formaDeCuenta = (c, tipo) => (c?.tipo === 'efectivo' ? 'efectivo' : tipo === 'salida' && (c?.tipo === 'credito' || c?.tipo === 'debito') ? 'tarjeta' : 'transferencia');
+
 export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } = {}) {
   const estado = getEstado();
   const perfil = estado.perfil;
   const draft = mov ? structuredClone(mov) : {
     id: nuevoId(), tipo, fecha: hoyISO(), monto: '', cuenta: estado.cuentas.find((c) => c.tipo === 'debito')?.id ?? estado.cuentas[0]?.id,
-    formaPago: 'transferencia', pagador: 'pf', tasaIva: perfil?.frontera ? 0.08 : 0.16, cfdi: false, ...(preset ?? {}),
+    formaPago: formaDeCuenta(estado.cuentas.find((c) => c.tipo === 'debito') ?? estado.cuentas[0], tipo), pagador: 'pf', tasaIva: perfil?.frontera ? 0.08 : 0.16, cfdi: false, ...(preset ?? {}),
   };
   let repetir = '';
   let confirmarNegativo = false;
@@ -67,6 +75,8 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     if (fd.has('tasaIva')) { const v = fd.get('tasaIva'); draft.tasaIva = v === 'exento' ? 'exento' : Number(v); }
     draft.cfdi = fd.has('cfdi') ? true : (f.querySelector('[name=cfdi]') ? false : draft.cfdi);
     for (const k of ['sueldoBruto', 'isrRetenidoNomina']) if (fd.has(k)) draft[k] = fd.get(k) === '' ? undefined : Number(fd.get(k));
+    // Solo se guardan si la categoría los pide: qué es un Otro ingreso, y alumno y nivel de una colegiatura
+    for (const k of ['origen', 'alumno', 'nivel']) draft[k] = fd.has(k) && fd.get(k) !== '' ? String(fd.get(k)).trim() : undefined;
     if (f.querySelector('[name=aj_subtotal]')) {
       const aj = {};
       for (const k of ['subtotal', 'iva', 'isrRet', 'ivaRet']) { const v = fd.get('aj_' + k); if (v !== '' && v != null) aj[k] = Number(v); }
@@ -78,7 +88,11 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     const z = $('#zonaCat', d);
     if (draft.tipo === 'transferencia') { z.innerHTML = ''; draft.categoria = undefined; return; }
     const cats = categoriasDisponibles(perfil, draft.fecha, draft.tipo, CATEGORIAS, mov?.categoria);
-    if (!cats.some((c) => c.id === draft.categoria)) draft.categoria = cats[0]?.id;
+    if (!cats.some((c) => c.id === draft.categoria)) {
+      // Con un régimen de actividad (RESICO...), una entrada nueva empieza como cobro de esa actividad, no como sueldo
+      const cobro = draft.tipo === 'entrada' ? categoriaDeCobro(perfil, draft.fecha, CATEGORIAS) : null;
+      draft.categoria = (cobro && cats.some((c) => c.id === cobro.id) ? cobro.id : cats[0]?.id);
+    }
     z.innerHTML = `<p class="field-label">Categoría</p><div class="catgrid" role="radiogroup" aria-label="Categoría">${cats.map((c) =>
       `<button type="button" role="radio" aria-checked="${c.id === draft.categoria}" data-c="${c.id}"><span class="avatar" style="background:${c.color}">${icon(c.icono)}</span><span>${esc(c.nombre)}</span></button>`).join('')}</div>`;
   };
@@ -88,6 +102,20 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     const cat = draft.categoria ? categoria(draft.categoria) : null;
     let h = '';
     if (cat?.tip) h += `<div class="notice">${icon('info')}<span>${esc(cat.tip)}</span></div>`;
+    if (cat?.id === 'otro_ingreso') {
+      const o = ORIGENES_LIBRE[draft.origen];
+      const cobro = categoriaDeCobro(perfil, draft.fecha, CATEGORIAS);
+      h += `<label class="field"><span>¿Qué es este dinero?</span><select name="origen"><option value="">Elige una opción</option>${Object.entries(ORIGENES_LIBRE).map(([k, x]) =>
+        `<option value="${k}" ${draft.origen === k ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('')}</select>
+        ${o ? `<span class="hint">${esc(o.texto)} Es una guía general: confírmalo con el SAT o con un contador.</span>` : '<span class="hint">Con esto sabemos si se declara, si está exento o si solo se informa en tu anual.</span>'}</label>`;
+      if (draft.origen === 'actividad' && cobro) h += `<button type="button" class="btn sm" data-c="${cobro.id}" style="margin:-6px 0 14px">${icon('receipt')}Cambiar a ${esc(cobro.nombre)}</button>`;
+    }
+    if (cat?.id === 'colegiaturas') {
+      h += `<div class="cols-2"><label class="field"><span>Alumno</span><input name="alumno" maxlength="40" value="${esc(draft.alumno ?? '')}" placeholder="Nombre corto, por ejemplo Sofi" /></label>
+        <label class="field"><span>Nivel</span><select name="nivel"><option value="">Elige el nivel</option>${Object.entries(NIVELES_COLEGIATURA).map(([k, t]) =>
+          `<option value="${k}" ${draft.nivel === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label></div>
+        <p class="hint" style="margin:-6px 0 14px">El tope del estímulo es por alumno y por nivel, al año.</p>`;
+    }
     if (draft.tipo === 'transferencia') {
       h += `<label class="field"><span>Cuenta destino</span><select name="cuentaDestino">${getEstado().cuentas.filter((c) => c.id !== draft.cuenta).map((c) => `<option value="${esc(c.id)}" ${c.id === draft.cuentaDestino ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}</select>
         <span class="hint">Mover dinero entre tus cuentas o pagar tu tarjeta no cuenta como gasto ni como ingreso.</span></label>`;
@@ -171,7 +199,17 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     if (!(await confirmar({ titulo: '¿Borrar este movimiento?', accion: 'Borrar movimiento', efectos }))) return;
     aplicar((s) => borrarMovimiento(s, draft.id)); borrarFoto(draft.id); cerrar(); toast('Movimiento borrado', icon('trash'));
   };
-  f.addEventListener('change', () => { sucio = true; });
+  let formaManual = !!mov;
+  f.addEventListener('change', (ev) => {
+    sucio = true;
+    if (ev.target.name === 'formaPago') formaManual = true;
+    if (ev.target.name === 'origen') { leer(); pintarExtra(); pintarPreview(); return; }
+    // Al cambiar la cuenta, la forma de pago la sigue (efectivo, tarjeta...), salvo que el usuario la haya elegido
+    if (ev.target.name === 'cuenta' && !formaManual) {
+      draft.formaPago = formaDeCuenta(getEstado().cuentas.find((c) => c.id === ev.target.value), draft.tipo);
+      const sel = f.querySelector('[name=formaPago]'); if (sel) sel.value = draft.formaPago;
+    }
+  });
   f.addEventListener('input', (ev) => {
     sucio = true;
     const n = ev.target.name; leer();
@@ -183,10 +221,13 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     ev.preventDefault(); leer();
     if (!(draft.monto > 0)) { $('#hintMonto', d).textContent = 'Escribe un monto mayor a cero.'; f.monto.focus(); return; }
     if (draft.tipo === 'transferencia' && !draft.cuentaDestino) { toast('Agrega otra cuenta en Ajustes para transferir'); return; }
+    if (draft.tipo !== 'transferencia') delete draft.cuentaDestino; // no dejar una cuenta destino de cuando era transferencia
     const sim = calcular({ ...getEstado(), movimientos: [...getEstado().movimientos.filter((m) => m.id !== draft.id), draft] }, hoyISO());
     const c = sim.cuentas.find((x) => x.id === draft.cuenta);
     if (draft.tipo !== 'entrada' && c && !c.esDeuda && c.saldo < 0 && !confirmarNegativo) { confirmarNegativo = true; pintarPreview(); return; }
     const limpio = Object.fromEntries(Object.entries(draft).filter(([, v]) => v !== undefined && v !== ''));
+    const igual = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+    if (mov && Object.keys({ ...mov, ...limpio }).filter((k) => !['historial'].includes(k)).every((k) => igual(mov[k], limpio[k]))) { cerrar(); return; }
     // Candado: cambiar un mes ya declarado
     const decls = getEstado().declaraciones ?? {};
     const fiscal = (x) => x && (categoria(x.categoria).reg || categoria(x.categoria).clase === 'actividad');
@@ -202,7 +243,7 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     if (!mov && repetir) {
       const { id, fecha, historial, uuid, ...plantilla } = limpio;
       aplicar((s) => guardarRecurrente(s, { nombre: limpio.nota || limpio.contraparte || (limpio.categoria ? categoria(limpio.categoria).nombre : 'Transferencia'),
-        frecuencia: repetir, dia: +fecha.slice(8, 10), desde: fecha, hechas: [fecha], plantilla }));
+        frecuencia: repetir, dia: +fecha.slice(8, 10), desde: fecha, hechas: [repetir === 'quincenal' ? quincenaDe(fecha) : fecha], plantilla }));
     }
     cerrar();
     if (!mov && repetir) { toast('Guardado. Lo verás en Recurrentes para confirmarlo cada vez.', icon('clock')); return; }
@@ -221,7 +262,7 @@ export function abrirDetalle(id) {
   const cat = m.tipo === 'transferencia' ? { nombre: 'Transferencia', icono: 'swap', color: '#475569' } : categoria(m.categoria);
   const d = dlg();
   const filas = detalleTexto(m).map(([k, v]) => `<div class="ln"><span>${esc(k)}</span><span>${esc(v)}</span></div>`).join('');
-  const hist = (m.historial ?? []).map((h) => `<li>${esc(h.accion === 'creado' ? 'Creado' : 'Editado')} el ${esc(fechaLarga(h.en.slice(0, 10)))}${h.antes && Object.keys(h.antes).length ? ` <span class="muted">(antes: ${esc(Object.entries(h.antes).map(([k, v]) => `${k} ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(', '))})</span>` : ''}</li>`).join('');
+  const hist = (m.historial ?? []).map((h) => `<li>${esc(h.accion === 'creado' ? 'Creado' : 'Editado')} el ${esc(new Date(h.en).toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }))}${h.antes && Object.keys(h.antes).length ? ` <span class="muted">(antes: ${esc(Object.entries(h.antes).map(([k, v]) => `${k} ${typeof v === 'object' ? JSON.stringify(v) : v}`).join(', '))})</span>` : ''}</li>`).join('');
   d.innerHTML = `<div class="dlg-head"><span class="avatar" style="background:${cat.color}">${icon(cat.icono)}</span><h2>${esc(m.nota || m.contraparte || cat.nombre)}</h2>
       <button type="button" class="btn ghost icon" data-x aria-label="Cerrar">${icon('x')}</button></div>
     <div class="dlg-body detail">

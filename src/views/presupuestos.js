@@ -26,7 +26,8 @@ export function render(main) {
   const gastoMes = periodo(foto, a, b).porCategoria;
   // Promedio de gasto real de los 3 meses anteriores, para sugerir
   const prev = mesesAtras(hoyK, 4).slice(1).map((k) => { const [x, y] = rangoMes(k); return periodo(foto, x, y).porCategoria; });
-  const prom = (c) => prev.reduce((s, p) => s + (p[c] ?? 0), 0) / 3;
+  const conGasto = prev.filter((p) => Object.values(p).some((v) => v > 0)).length || 1;
+  const prom = (c) => prev.reduce((s, p) => s + (p[c] ?? 0), 0) / conGasto;
   const cats = categoriasDisponibles(foto.perfil, foto.hoy, 'salida', CATEGORIAS);
   const porCat = Object.fromEntries(est.filas.map((f) => [f.categoria, f]));
   const sinPres = Object.entries(gastoMes).filter(([c, v]) => v > 0 && !pres[c]).reduce((s, [, v]) => s + v, 0);

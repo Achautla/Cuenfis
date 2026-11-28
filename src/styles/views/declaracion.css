@@ -40,3 +40,8 @@
 .guia-pasos li b { color: var(--ink); }
 .guia .row { padding: 12px 20px 4px; }
 .guia > p { padding: 4px 20px 16px; margin: 0; }
+.decl-nosum b { display: block; margin-bottom: 4px; }
+.decl-nosum-lista { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.decl-nosum-lista li { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.decl-nosum-lista li span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.decl-nosum-lista li b { display: inline; margin: 0; font-family: var(--font-num); }

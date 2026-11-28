@@ -1,17 +1,18 @@
 import { getFoto, getEstado, aplicar } from '../data/store.js';
 import { marcarDeclaracion, guardarAcuse } from '../data/acciones.js';
-import { REGIMENES } from '../data/catalogo.js';
-import { params } from '../core/fiscal.js';
+import { REGIMENES, categoria, NIVELES_COLEGIATURA } from '../data/catalogo.js';
+import { params, redondeoSat, fechaLimiteMensual } from '../core/fiscal.js';
 import { reglas } from '../core/reglas.js';
 import { chipFuente, avisoProvisional, leyenda } from '../ui/fuente.js';
 import { regimenesEnRango } from '../core/regimen.js';
 import { icon } from '../ui/icons.js';
-import { $, esc, money, pct, nombreMes, fechaLarga, toast, descargar } from '../ui/dom.js';
+import { $, esc, money, pct, nombreMes, fechaLarga, fechaCorta, toast, descargar } from '../ui/dom.js';
 import { confirmar } from '../ui/confirmar.js';
 import * as nube from '../data/nube.js';
 import { ID_POR_ETIQUETA, CASILLAS, guiaCasilla } from '../ia/casillas.js';
 import { iaActiva } from '../ia/consentimiento.js';
 import * as conv from '../ia/conversacion.js';
+import { abrirFormulario } from './movimiento-form.js';
 import '../styles/views/declaracion.css';
 
 let tab = null, mesSel = null, anioSel = null;
@@ -24,11 +25,7 @@ const preguntaBtn = (label) => {
 };
 const F = (label, op, v, help = '', tot = false, src = null) => `<div class="f${tot ? ' tot' : ''}"><span>${tot ? `<b>${esc(label)}</b>` : esc(label)}${help ? `<small>${esc(help)}</small>` : ''}${src || ID_POR_ETIQUETA[label] ? `<span class="f-acc">${src ? chipFuente(...src) : ''}${preguntaBtn(label)}</span>` : ''}</span><span class="op">${op}</span><span class="v num">${typeof v === 'number' ? money(v).replace('$', '') : esc(v)}</span></div>`;
 
-function limite(clave) {
-  const [y, m] = clave.split('-').map(Number);
-  const d = new Date(Date.UTC(y, m, 17));
-  return fechaLarga(d.toISOString().slice(0, 10));
-}
+const limite = (clave) => fechaLarga(fechaLimiteMensual(clave));
 
 function estadoMes(m) {
   const cuentas = getEstado().cuentas.filter((c) => !['credito', 'prestamo'].includes(c.tipo)).sort((a, b) => (b.tipo === 'debito') - (a.tipo === 'debito'));
@@ -118,7 +115,7 @@ const PASOS_MENSUAL = [
 function guia(m) {
   const filas = Object.values(CASILLAS).filter((c) => c[0] === 'isr' || c[0] === 'iva');
   const cifras = filas.map((c) => [c[0].toUpperCase(), c[2], c[3](m)]).filter(([, , v]) => typeof v === 'number');
-  const texto = `Declaración ${nombreMes(m.clave)} (estimación Cuenfis)\n` + cifras.map(([t, l, v]) => `${t} · ${l}: ${Math.round(v)}`).join('\n') + `\nTotal a pagar: ${Math.round(m.totalPagar)}`;
+  const texto = `Declaración ${nombreMes(m.clave)} (estimación Cuenfis)\n` + cifras.map(([t, l, v]) => `${t} · ${l}: ${redondeoSat(v)}`).join('\n') + `\nTotal a pagar: ${redondeoSat(m.isrCargo) + redondeoSat(m.ivaCargo)}`;
   return `<details class="card guia" ${m.estado === 'pendiente' ? 'open' : ''}>
     <summary><span class="guia-ico">${icon('file')}</span><span><b>Guía para presentarla en el portal del SAT</b><small>${PASOS_MENSUAL.length} pasos · total estimado a pagar ${money(m.totalPagar)}</small></span></summary>
     <ol class="guia-pasos">${PASOS_MENSUAL.map(([t, d]) => `<li><b>${t}</b><span>${d}</span></li>`).join('')}</ol>
@@ -165,7 +162,7 @@ function iva(m) {
     ${F('Total de IVA a cargo', '(=)', m.ivaTrasladado, '', true)}
     ${F('IVA no cobrado por devoluciones, descuentos y bonificaciones', '(−)', 0)}
     ${F('IVA retenido', '(−)', m.ivaRet, 'Lo que te retuvieron las empresas (2/3 del IVA).', false, ['iva.retencionPM', y])}
-    ${F('IVA acreditable del periodo', '(−)', m.ivaAcred, `Captura manual: IVA de gastos de tu actividad con CFDI y pago bancario (o efectivo hasta ${money(params(y).topeEfectivo)}).`, false, ['topeEfectivo', y])}
+    ${F('IVA acreditable del periodo', '(−)', m.ivaAcred, `Captura manual: IVA de gastos de tu actividad con CFDI y pago bancario (o efectivo hasta ${money(params(y).topeEfectivo)}).${m.ivaAcredNoProporcional ? ` Como parte de tus cobros es exenta, solo se acredita el ${Math.round(m.proporcionAcreditable * 100)}% (no se acreditan ${money(m.ivaAcredNoProporcional)}).` : ''}`, false, ['topeEfectivo', y])}
     ${F('IVA por devoluciones, descuentos y bonificaciones en gastos', '(+)', 0)}
     ${F(m.ivaNeto >= 0 ? 'Cantidad a cargo' : 'Saldo a favor', '(=)', Math.abs(m.ivaNeto), '', true)}
     ${F('Acreditamiento del saldo a favor de periodos anteriores', '(−)', m.favorAplicado, m.favorAnterior ? `Tenías ${money(m.favorAnterior)} a favor de meses anteriores.` : '')}
@@ -191,7 +188,7 @@ function anual(y) {
       ${F('Médicas, dentales, hospital y seguro', '', ded.general, `Tope: el menor entre ${p.deducciones.umasAnuales} UMA anuales y ${pct(p.deducciones.porcentajeIngresos)} de tus ingresos = ${money(ded.limGeneral)}.`, false, ['deducciones', y])}
       ${ded.afore ? F('Aportaciones voluntarias al retiro', '', ded.afore, `Tope propio: ${money(ded.limAfore)}.`, false, ['deducciones.afore', y]) : ''}
       ${ded.donativos ? F('Donativos', '', ded.donativos, `Tope: ${pct(p.deducciones.donativos.porcentajeIngresos)} de tus ingresos = ${money(ded.limDonativos)}.`, false, ['deducciones.donativos', y]) : ''}
-      ${ded.colegiaturas ? F('Colegiaturas (estímulo)', '', ded.colegiaturas, `Tope por alumno y nivel; se aplica el de bachillerato (${money(ded.topeColegiatura)}). Confirma el nivel.`, false, ['deducciones.colegiaturas', y]) : ''}
+      ${ded.colegiaturas ? F('Colegiaturas (estímulo)', '', ded.aplicables.colegiaturas, `Pagaste ${money(ded.colegiaturas)}. Tope por alumno y nivel: ${ded.alumnos.map((a) => `${a.alumno || 'sin nombre'} (${a.nivel ? NIVELES_COLEGIATURA[a.nivel] : 'sin nivel, se usa bachillerato'}) ${money(a.aplicable)} de ${money(a.tope)}`).join('; ')}.${ded.alumnos.some((a) => !a.alumno || !a.nivel) ? ' Anota alumno y nivel en cada colegiatura para aplicar el tope correcto.' : ''}`, false, ['deducciones.colegiaturas', y]) : ''}
       ${F('Deducciones aplicables', '(=)', ded.total, `${ded.deducibles.length} de ${ded.lista.length} gastos cumplen requisitos (CFDI y pago bancario).`, true)}
       <p class="tabn">Cálculo</p>
       ${F('Base gravable', '(=)', an.base, 'Ingresos menos deducciones.')}
@@ -212,14 +209,43 @@ function anual(y) {
       ? `Si presentaste todas tus declaraciones mensuales, la regla 3.13.7 de la ${esc(reglas(y).p.publicaciones?.rmf ?? 'RMF')} te releva de la anual por RESICO. Puedes presentarla de forma opcional para aplicar deducciones personales (reglas 3.13.20 y 3.13.21): consúltalo con un contador.`
       : 'Tus ingresos RESICO se informan, pero no se suman a la base de tus sueldos: sus pagos mensuales son definitivos.'}</span></div>`;
   }
+  h += otrosIngresos(an, y);
   if (an.regimenesSinCalculo.length) h += `<div class="notice warn">${icon('clock')}<span>El cálculo de ${esc(an.regimenesSinCalculo.map((r) => REGIMENES[r].corto).join(', '))} llega en una fase posterior. Sus movimientos ya se guardan.</span></div>`;
   return h || `<div class="empty">${icon('file')}<p>No tuviste régimenes con declaración en ${y}.</p></div>`;
+}
+
+/** Otros ingresos (préstamos, regalos, ventas personales...): qué se informa o se declara en la anual. Estimado. */
+function otrosIngresos(an, y) {
+  const o = an.otrosIngresos;
+  if (!o?.total) return '';
+  const puntos = [];
+  if (o.informarArt90) puntos.push(`Tus préstamos, regalos y premios de ${y} suman ${money(o.art90)}: pasan de ${money(o.limiteArt90)}, así que <b>debes informarlos en tu anual</b> (art. 90 LISR).`);
+  if (o.informarExentos) puntos.push(`Tus ingresos exentos (regalos, herencias, venta de tu casa) suman ${money(o.exentos)}: pasan de ${money(o.limiteExentos)}, así que <b>se informan en tu anual</b> (art. 150 LISR).`);
+  if (o.regaloGravado > 0) puntos.push(`Los regalos de personas que no son tu familia directa suman ${money(o.regaloOtro)}. Solo están exentos ${money(o.topeRegalo)} (3 UMA anuales); <b>${money(o.regaloGravado)} serían ingreso que se declara en la anual</b>.`);
+  if (o.intereses) puntos.push('Registraste intereses o rendimientos: pide la constancia de tu banco; los intereses reales se consideran en la anual.');
+  if (o.comoActividad) puntos.push(`${o.comoActividad === 1 ? 'Una entrada marcada' : `${o.comoActividad} entradas marcadas`} como «pago por mi trabajo» siguen como Otro ingreso: cámbialas a la categoría de cobro de tu régimen para que cuenten.`);
+  if (o.sinExplicar) puntos.push(`${o.sinExplicar === 1 ? 'Una entrada' : `${o.sinExplicar} entradas`} de Otro ingreso no dicen qué son. Ábrelas y elige «¿Qué es este dinero?»: si el SAT ve depósitos que no declaras, puede pedirte que los expliques (art. 91 LISR).`);
+  if (!puntos.length) return `<div class="notice">${icon('info')}<span>Tus otros ingresos de ${y} (${money(o.total)}) están explicados y no pasan de los límites para informarlos en la anual.</span></div>`;
+  const grave = o.informarArt90 || o.informarExentos || o.regaloGravado > 0;
+  return `<div class="notice ${grave ? 'warn' : ''}">${icon(grave ? 'alert' : 'info')}<span><b>Otros ingresos de ${y}: ${money(o.total)}</b><ul class="decl-nosum-lista">${puntos.map((t) => `<li><span>${t}</span></li>`).join('')}</ul></span></div>`;
+}
+
+/** Entradas del mes que no entran a la declaración: el usuario decide si son cobros de su actividad. */
+function noSumadas(m, foto) {
+  if (!m.noSumadas?.length) return '';
+  const movs = m.noSumadas.map((id) => foto.movs.find((x) => x.id === id)).filter(Boolean);
+  return `<div class="notice warn decl-nosum">${icon('alert')}<span>
+    <b>${movs.length === 1 ? 'Una entrada' : `${movs.length} entradas`} de ${esc(nombreMes(m.clave))} por ${money(m.noSumadasTotal)} no ${movs.length === 1 ? 'se suma' : 'se suman'} a esta declaración.</b>
+    Solo cuentan los movimientos con la categoría «Cobro RESICO» y con fecha dentro de tu régimen. Si alguna es un pago por tu trabajo o tus ventas, ábrela y cámbiala a Cobro RESICO; si dice «fecha fuera de tu régimen», corrige su fecha o la fecha de alta del régimen en Ajustes. Si es un regalo, un préstamo o una venta personal, ábrela y elige qué es: dejará de aparecer aquí.
+    <ul class="decl-nosum-lista">${movs.map((x) => `<li><span>${esc(fechaCorta(x.fecha))} · ${esc(x.nota || x.contraparte || categoria(x.categoria).nombre)}${x.d.clase === 'ingreso' && !x.d.fiscal ? ` · <i>${x.d.regimen === 'resico' ? 'fecha fuera de tu régimen' : `no estabas en ${esc(REGIMENES[x.d.regimen]?.corto ?? 'ese régimen')} en esa fecha`}</i>` : ''}</span><b>${money(x.monto)}</b><button type="button" class="btn sm" data-revisar="${esc(x.id)}">Revisar</button></li>`).join('')}</ul>
+  </span></div>`;
 }
 
 export function render(main) {
   const foto = getFoto();
   const meses = Object.values(foto.meses).filter((m) => !m.futuro).sort((a, b) => b.clave.localeCompare(a.clave));
-  const anios = [...new Set([...(foto.perfil.regimenes ?? []).map((r) => +r.desde.slice(0, 4)), +foto.hoy.slice(0, 4)])].sort((a, b) => b - a)
+  const primerAnio = Math.min(+foto.hoy.slice(0, 4), ...(foto.perfil.regimenes ?? []).map((r) => +r.desde.slice(0, 4)));
+  const anios = Array.from({ length: +foto.hoy.slice(0, 4) - primerAnio + 1 }, (_, i) => +foto.hoy.slice(0, 4) - i)
     .filter((y) => regimenesEnRango(foto.perfil, `${y}-01-01`, `${y}-12-31`).some((r) => ['sueldos', 'resico'].includes(r)) || regimenesEnRango(foto.perfil, `${y}-01-01`, `${y}-12-31`).length);
   const tabs = [];
   if (meses.length) tabs.push(['isr', 'ISR RESICO'], ['iva', 'IVA']);
@@ -238,6 +264,7 @@ export function render(main) {
         : `<label class="field inline"><span>Ejercicio</span><select id="selAnio">${anios.map((y) => `<option ${y === anioSel ? 'selected' : ''}>${y}</option>`).join('')}</select></label>`}
     </div>` : `<div class="empty card">${icon('file')}<p>Tu perfil no tiene un régimen con declaraciones. Agrégalo en Ajustes.</p><a class="btn" href="#/ajustes">Ir a Ajustes</a></div>`}
     ${avisoProvisional(tab === 'anual' ? anioSel : +(mesSel ?? foto.hoy).slice(0, 4))}
+    ${tab !== 'anual' && m ? noSumadas(m, foto) : ''}
     ${tab !== 'anual' && m ? guia(m) : ''}
     ${tab === 'isr' && m ? isr(m) + estadoMes(m) : ''}
     ${tab === 'iva' && m ? iva(m) + estadoMes(m) : ''}
@@ -245,6 +272,10 @@ export function render(main) {
     <p class="disclaimer">Cálculos estimados con ${esc(leyenda(tab === 'anual' ? anioSel : +(mesSel ?? foto.hoy).slice(0, 4)))}. Confírmalos con el SAT o con un contador antes de declarar. <a href="#/reglas">Ver reglas fiscales</a></p>
   </section>`;
 
+  main.querySelectorAll('[data-revisar]').forEach((b) => (b.onclick = () => {
+    const mov = getEstado().movimientos.find((x) => x.id === b.dataset.revisar);
+    if (mov) abrirFormulario({ mov });
+  }));
   main.querySelectorAll('[data-tab]').forEach((b) => (b.onclick = () => { tab = b.dataset.tab; render(main); }));
   $('#selMes', main)?.addEventListener('change', (e) => { mesSel = e.target.value; render(main); });
   $('#selAnio', main)?.addEventListener('change', (e) => { anioSel = +e.target.value; render(main); });

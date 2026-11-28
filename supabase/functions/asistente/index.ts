@@ -11,6 +11,8 @@ import { Anthropic, proveedor, type Modo } from './proveedores.ts';
 const ORIGENES = (Deno.env.get('ORIGENES_PERMITIDOS') ??
   'https://achautla.github.io,capacitor://localhost,https://localhost,http://localhost,http://localhost:5173').split(',');
 const LIMITE_MENSAJES = Number(Deno.env.get('LIMITE_MENSAJES_MES') ?? 300);
+// Tope de gasto por usuario al mes (USD): cubre también las vueltas de herramientas, que no cuentan como mensaje
+const LIMITE_COSTO = Number(Deno.env.get('LIMITE_COSTO_USD_MES') ?? 1);
 const MAX_CUERPO = 1_600_000; // bytes (una foto de ticket ya achicada en el dispositivo)
 const MAX_IMAGEN = 1_200_000; // caracteres base64
 const TIPOS_IMAGEN = ['image/jpeg', 'image/png', 'image/webp'];
@@ -57,6 +59,19 @@ function validar(b: Record<string, unknown>): string | null {
   if (!Array.isArray(ms) || !ms.length || ms.length > MAX_MENSAJES) return 'mensajes';
   if (!ms.every((m) => m && (m.role === 'user' || m.role === 'assistant') && (typeof m.content === 'string' || Array.isArray(m.content)))) return 'mensajes';
   if (ms[0].role !== 'user' || ms.at(-1).role !== 'user') return 'orden';
+  // Solo los bloques que usa la app: texto e imagen del usuario, resultados de herramientas en texto,
+  // y texto, razonamiento o llamadas a herramientas del asistente (tal como los devolvió la API). Cada resultado debe responder a una llamada del turno anterior.
+  for (let i = 0; i < ms.length; i++) {
+    const m = ms[i];
+    if (typeof m.content === 'string') { if (m.content.length > 20_000) return 'mensajes'; continue; }
+    const previas = new Set((Array.isArray(ms[i - 1]?.content) ? ms[i - 1].content : []).filter((b) => b?.type === 'tool_use').map((b) => b.id));
+    for (const b of m.content) {
+      const t = b?.type;
+      if (m.role === 'assistant' ? !['text', 'tool_use', 'thinking', 'redacted_thinking'].includes(t) : !['text', 'image', 'tool_result'].includes(t)) return 'bloque';
+      if (t === 'tool_result' && (typeof b.content !== 'string' || b.content.length > 50_000 || !previas.has(b.tool_use_id))) return 'bloque';
+      if (t === 'text' && (typeof b.text !== 'string' || b.text.length > 20_000)) return 'mensajes';
+    }
+  }
   // Fotos: solo en la pregunta más reciente (las herramientas pueden venir después), una a la vez y ya achicada
   const imagenes = (m: { content: unknown }) => (Array.isArray(m.content) ? m.content.filter((b) => b?.type === 'image') : []);
   const ultimaPregunta = ms.findLastIndex((m) => m.role === 'user' && esMensajeNuevo(m));
@@ -112,12 +127,22 @@ Deno.serve(async (req) => {
   // El uso solo lo escribe el servidor (el usuario no puede reiniciarlo).
   const admin = createClient(url, llave('SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEYS'), { auth: { persistSession: false } });
   const mes = new Date().toISOString().slice(0, 7);
-  const { data: fila } = await admin.from('uso_ia').select('mensajes').eq('user_id', uid).eq('mes', mes).maybeSingle();
+  const { data: fila } = await admin.from('uso_ia').select('mensajes, costo_usd').eq('user_id', uid).eq('mes', mes).maybeSingle();
   const usados = fila?.mensajes ?? 0;
+  if (Number(fila?.costo_usd ?? 0) >= LIMITE_COSTO) {
+    return json({ error: 'limite', mensaje: 'Llegaste al límite de uso del asistente de este mes.', uso: { mensajes: usados, limite: LIMITE_MENSAJES } }, 429, h);
+  }
   const mensajes = b.mensajes as { role: string; content: unknown }[];
   const nuevo = esMensajeNuevo(mensajes.at(-1)!);
   if (nuevo && usados >= LIMITE_MENSAJES) {
     return json({ error: 'limite', mensaje: `Llegaste al límite de ${LIMITE_MENSAJES} mensajes de este mes.`, uso: { mensajes: usados, limite: LIMITE_MENSAJES } }, 429, h);
+  }
+  // Aparta el mensaje de forma atómica (dos peticiones a la vez no pasan el límite). Si la función SQL
+  // aún no existe, se sigue con la revisión de arriba y el mensaje se suma al final como antes.
+  const { data: reservado, error: er } = await admin.rpc('reservar_uso_ia', { p_user: uid, p_mes: mes, p_mensajes: nuevo ? 1 : 0, p_limite: LIMITE_MENSAJES, p_limite_costo: LIMITE_COSTO });
+  const atomico = !er;
+  if (atomico && reservado !== true) {
+    return json({ error: 'limite', mensaje: 'Llegaste al límite de uso del asistente de este mes.', uso: { mensajes: usados, limite: LIMITE_MENSAJES } }, 429, h);
   }
 
   try {
@@ -128,11 +153,13 @@ Deno.serve(async (req) => {
       herramientas: HERRAMIENTAS,
     });
     await admin.rpc('sumar_uso_ia', {
-      p_user: uid, p_mes: mes, p_mensajes: nuevo ? 1 : 0,
+      p_user: uid, p_mes: mes, p_mensajes: nuevo && !atomico ? 1 : 0,
       p_entrada: r.uso.entrada + r.uso.cacheLeida + r.uso.cacheEscrita, p_salida: r.uso.salida, p_costo: r.costoUsd,
     });
     return json({ contenido: r.contenido, parada: r.parada, modelo: r.modelo, uso: { mensajes: usados + (nuevo ? 1 : 0), limite: LIMITE_MENSAJES } }, 200, h);
   } catch (e) {
+    // Sin respuesta no cuenta: se devuelve el mensaje apartado
+    if (atomico && nuevo) await admin.rpc('sumar_uso_ia', { p_user: uid, p_mes: mes, p_mensajes: -1, p_entrada: 0, p_salida: 0, p_costo: 0 }).then(() => {}, () => {});
     if (e instanceof Anthropic.RateLimitError) return json({ error: 'ocupado', mensaje: 'El asistente está ocupado. Intenta en un minuto.' }, 503, h);
     if (e instanceof Anthropic.BadRequestError) { console.error('peticion rechazada', e.status); return json({ error: 'peticion', mensaje: 'No pude procesar esa conversación. Empieza una nueva.' }, 400, h); }
     if (e instanceof Anthropic.APIError) { console.error('proveedor', e.status); return json({ error: 'proveedor', mensaje: 'El asistente no está disponible por ahora.' }, 502, h); }

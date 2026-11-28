@@ -15,8 +15,9 @@ export function render(main) {
   const [a, b] = rango('movs', foto.hoy);
   const per = periodo(foto, a, b);
   const usadas = [...new Set(foto.movs.map((m) => m.categoria).filter(Boolean))];
-  const ms = per.movs.filter((m) => (!tipo || m.tipo === tipo) && (!cat || m.categoria === cat) &&
+  const filtrar = () => per.movs.filter((m) => (!tipo || m.tipo === tipo) && (!cat || m.categoria === cat) &&
     (!q || `${m.nota ?? ''} ${m.contraparte ?? ''} ${categoria(m.categoria).nombre}`.toLowerCase().includes(q.toLowerCase()))).reverse();
+  let ms = filtrar();
 
   const extra = `<label class="field"><span>Tipo</span><select data-loc="tipo"><option value="">Todos</option><option value="entrada" ${tipo === 'entrada' ? 'selected' : ''}>Entradas</option><option value="salida" ${tipo === 'salida' ? 'selected' : ''}>Salidas</option><option value="transferencia" ${tipo === 'transferencia' ? 'selected' : ''}>Transferencias</option></select></label>
     <label class="field"><span>Categoría</span><select data-loc="cat"><option value="">Todas</option>${CATEGORIAS.filter((c) => usadas.includes(c.id)).map((c) => `<option value="${c.id}" ${cat === c.id ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}</select></label>
@@ -33,14 +34,17 @@ export function render(main) {
         <div><span>Lo tuyo</span><b class="num">${money(per.propios)}</b></div>
         <div><span>Gastos reales</span><b class="num">${money(per.gastos)}</b></div>
       </div>
-      ${listaAgrupada(ms, foto, 'No hay movimientos con estos filtros.')}
+      <div id="movLista">${listaAgrupada(ms, foto, 'No hay movimientos con estos filtros.')}</div>
     </div></section>`;
 
   enlazar(main, 'movs', () => render(main));
+  // Al buscar solo se redibuja la lista: el campo no pierde el foco y el teclado del celular no se cierra
+  let espera = null;
   main.querySelectorAll('[data-loc]').forEach((el) => el.addEventListener(el.type === 'search' ? 'input' : 'change', () => {
     ({ tipo: () => (tipo = el.value), cat: () => (cat = el.value), q: () => (q = el.value) })[el.dataset.loc]();
-    const pos = el.selectionStart; render(main);
-    const nuevo = main.querySelector(`[data-loc="${el.dataset.loc}"]`); if (el.type === 'search') { nuevo.focus(); nuevo.setSelectionRange(pos, pos); }
+    if (el.type !== 'search') { render(main); return; }
+    clearTimeout(espera);
+    espera = setTimeout(() => { ms = filtrar(); const l = $('#movLista', main); if (l) l.innerHTML = listaAgrupada(ms, foto, 'No hay movimientos con estos filtros.'); }, 150);
   }));
   $('#nuevo', main).onclick = () => abrirFormulario({ tipo: 'entrada' });
   $('#csv', main).onclick = () => descargar(`cuenfis-movimientos-${a}-${b}.csv`.replace(/0000-01-01|9999-12-31/g, 'todo'), csv(ms, foto), 'text/csv;charset=utf-8');

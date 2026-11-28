@@ -116,3 +116,10 @@
 @media (max-width: 899px) { .nav a[aria-current="page"] { box-shadow: inset 0 -2px 0 #8fc1ff; } }
 .mobile-top { background: var(--grad-marino); }
 .badge.info { background: var(--accent); }
+
+/* Con el teclado abierto: sin barra inferior ni botón flotante, para que se vea lo que escribes */
+@media (max-width: 899px) {
+  .teclado .sidebar, .teclado .fab { display: none !important; }
+  .teclado #main { padding-bottom: 24px; }
+  .teclado .ia-caja { bottom: 0; }
+}

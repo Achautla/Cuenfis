@@ -94,6 +94,8 @@ const dispositivo = () => `${navigator.platform || 'web'} · ${navigator.userAge
 /** Sube el estado. Si otro dispositivo guardó una versión más nueva, no la pisa: devuelve { conflicto: remoto }. */
 export async function subir(estado) {
   const meta = leerMeta();
+  // Los datos de este dispositivo son de otra cuenta: nunca se suben a esta
+  if (meta.user && usuario && meta.user !== usuario.id) throw new Error('Los datos de este dispositivo son de otra cuenta. Cierra sesión y entra con la tuya.');
   const datos = sinArchivos(estado);
   if (meta.version == null) {
     const { data, error } = await sb.from('espacios').insert({ datos, dispositivo: dispositivo() }).select('version').single();
@@ -115,7 +117,7 @@ export async function subir(estado) {
 /** Adopta el documento de la nube como la versión de este dispositivo. */
 export function adoptar(remoto) { guardarMeta({ version: remoto.version, pendiente: false, user: usuario.id }); }
 export function marcarPendiente() { const m = leerMeta(); guardarMeta({ ...m, pendiente: true }); }
-export function olvidarVersion() { guardarMeta({ pendiente: true }); }
+export function olvidarVersion() { const m = leerMeta(); guardarMeta({ pendiente: true, ...(m.user ? { user: m.user } : {}) }); }
 export const versionLocal = () => leerMeta().version ?? null;
 
 export async function versionesAnteriores() {
@@ -133,6 +135,8 @@ export async function leerVersion(id) {
 export async function borrarNube() {
   const { error } = await sb.from('espacios').delete().eq('user_id', usuario.id);
   if (error) throw new Error(mensaje(error));
+  // Las copias anteriores también (requiere la política de la migración 20261130000000; sin ella no se borra nada y se sigue)
+  await sb.from('espacios_historial').delete().eq('user_id', usuario.id).then(() => {}, () => {});
   guardarMeta({});
 }
 

@@ -12,6 +12,7 @@ const VOLVER_A_PEDIR = 2 * 60 * 1000; // al volver a la app después de 2 minuto
 const leer = () => { try { return localStorage.getItem(PREF) === '1'; } catch { return false; } };
 const fijar = (v) => { try { v ? localStorage.setItem(PREF, '1') : localStorage.removeItem(PREF); } catch { /* */ } };
 const haySesion = () => { try { return !!localStorage.getItem('cuenfis:auth'); } catch { return false; } };
+const sesionGuardada = () => { try { const s = JSON.parse(localStorage.getItem('cuenfis:auth')); return { id: s?.user?.id ?? null, email: s?.user?.email ?? '' }; } catch { return { id: null, email: '' }; } };
 
 let plugin = null;
 async function bio() {
@@ -54,7 +55,10 @@ let bloqueada = false;
 export function bloquear() {
   if (!activa() || !haySesion() || bloqueada) return;
   bloqueada = true;
-  const email = nube.getUsuario()?.email ?? '';
+  // Lo que estuviera abierto (formularios, diálogos) se cierra: se dibuja encima de todo y dejaría ver los datos
+  document.querySelectorAll('dialog[open]').forEach((d) => { try { d.close(); } catch { /* */ } });
+  const previo = nube.getUsuario() ? { id: nube.getUsuario().id, email: nube.getUsuario().email ?? '' } : sesionGuardada();
+  const email = previo.email;
   const capa = document.createElement('div');
   capa.id = 'candado';
   capa.setAttribute('role', 'dialog');
@@ -67,7 +71,7 @@ export function bloquear() {
     <button type="button" class="btn primary cd-huella" id="cdHuella">${icon('fingerprint')}Entrar con huella</button>
     <button type="button" class="link-btn" id="cdPass">Usar mi contraseña</button>
     <form id="cdForm" hidden novalidate>
-      <label class="field"><span>Correo</span><input name="email" type="email" autocomplete="email" value="${esc(email)}" required /></label>
+      <label class="field"><span>Correo</span><input name="email" type="email" autocomplete="email" value="${esc(email)}" readonly required /></label>
       <label class="field"><span>Contraseña</span><input name="p" type="password" autocomplete="current-password" required /></label>
       <p class="small neg" id="cdErr" role="alert"></p>
       <button class="btn primary full">${icon('user')}Entrar</button>
@@ -75,8 +79,10 @@ export function bloquear() {
   </div>`;
   document.body.append(capa);
   document.documentElement.classList.add('con-candado');
+  const resto = [...document.body.children].filter((el) => el !== capa);
+  resto.forEach((el) => el.setAttribute('inert', ''));
   ojitos(capa);
-  const abrir = () => { capa.remove(); bloqueada = false; document.documentElement.classList.remove('con-candado'); };
+  const abrir = () => { capa.remove(); bloqueada = false; document.documentElement.classList.remove('con-candado'); resto.forEach((el) => el.removeAttribute('inert')); };
   const pedir = async () => { if (await verificar('Usa tu huella para entrar')) abrir(); };
   capa.querySelector('#cdHuella').onclick = pedir;
   capa.querySelector('#cdPass').onclick = () => { capa.querySelector('#cdForm').hidden = false; capa.querySelector('#cdPass').hidden = true; capa.querySelector('#cdForm input[name="p"]').focus(); };
@@ -84,8 +90,12 @@ export function bloquear() {
     ev.preventDefault();
     const f = ev.target, err = capa.querySelector('#cdErr');
     err.textContent = '';
-    try { await nube.entrar(f.email.value.trim(), f.p.value); abrir(); }
-    catch (e) { err.textContent = e.message || 'No pudimos entrar. Revisa tu correo y contraseña.'; }
+    try {
+      const u = await nube.entrar(email || f.email.value.trim(), f.p.value);
+      // Solo la misma cuenta desbloquea: con otra cuenta se cierra esa sesión y sigue bloqueado
+      if (previo.id && u?.id !== previo.id) { await nube.sb?.auth.signOut({ scope: 'local' }).catch(() => {}); err.textContent = 'Esa no es la cuenta de este teléfono.'; return; }
+      abrir();
+    } catch (e) { err.textContent = e.message || 'No pudimos entrar. Revisa tu contraseña.'; }
   };
   setTimeout(pedir, 300);
 }

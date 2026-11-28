@@ -1,5 +1,6 @@
 // Ejecuta en el dispositivo las herramientas que pide el asistente, con el motor de Cuenfis.
 // Devuelve datos compactos: al servidor de IA solo llega lo necesario para responder.
+import { fechaLimiteMensual } from '../core/fiscal.js';
 import { getFoto, getEstado } from '../data/store.js';
 import { CATEGORIAS, categoria, REGIMENES } from '../data/catalogo.js';
 import { categoriasDisponibles, regimenesEn, regimenesEnRango } from '../core/regimen.js';
@@ -14,8 +15,7 @@ const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 /** Fecha límite de la declaración de un mes: el día que marca la ley del mes siguiente. */
 function limitesDeMes(mes) {
-  const [y, m] = mes.split('-').map(Number);
-  return new Date(Date.UTC(y, m, reglas(y).p.diaLimiteMensual)).toISOString().slice(0, 10);
+  return fechaLimiteMensual(mes);
 }
 
 function resumen_periodo({ desde, hasta }) {

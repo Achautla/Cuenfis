@@ -52,6 +52,7 @@ import { revisar as revisarAvisos } from './ui/notificaciones.js';
 import { getFoto } from './data/store.js';
 import { nativo } from './native.js';
 import * as huella from './ui/huella.js';
+import { iniciarTeclado } from './ui/teclado.js';
 
 // p: aparece en la barra inferior del celular; el resto va en "Más". g: grupo del menú. ver: cuándo se muestra.
 const RUTAS = {
@@ -138,7 +139,13 @@ function render() {
   if (!iaTop.innerHTML) iaTop.innerHTML = icon('sparkle');
   setTimeout(preguntarSiHaceFalta, 600);
   document.title = `${RUTAS[r].t} · Cuenfis`;
-  RUTAS[r].v.render(main);
+  try {
+    RUTAS[r].v.render(main);
+  } catch (err) {
+    // Una pantalla con error no debe dejarte en la anterior sin decir nada
+    console.error(err);
+    main.innerHTML = `<section class="view"><div class="card empty">${icon('alert')}<p>No pudimos mostrar ${esc(RUTAS[r].t)}. Tus datos están a salvo. Intenta de nuevo o vuelve a <a href="#/inicio">Inicio</a>.</p></div></section>`;
+  }
   // Tablas con desplazamiento horizontal: alcanzables con teclado
   main.querySelectorAll('.table-wrap').forEach((t) => { t.tabIndex = 0; t.setAttribute('role', 'region'); t.setAttribute('aria-label', 'Tabla, desliza para ver más'); });
 }
@@ -186,7 +193,11 @@ function pintarSync(s) {
   top.setAttribute('aria-label', `Nube: ${txt}. Ver detalle`);
   top.innerHTML = icon(nivel === 'mal' ? 'cloud-off' : 'cloud');
   if (!$('#syncPanel').hidden) pintarPanel();
-  if (ruta() === 'cuenta' || location.hash.startsWith('#/cuenta')) render();
+  // En Cuenta, el estado de la nube cambia mientras escribes (correo, contraseña): no se redibuja la página
+  // con un campo activo, para no borrar lo que escribes ni cerrar el teclado. El chip de arriba sí se actualiza.
+  const activo = document.activeElement;
+  const escribiendo = activo && $('#main').contains(activo) && activo.matches('input, textarea, select');
+  if ((ruta() === 'cuenta' || location.hash.startsWith('#/cuenta')) && !escribiendo) render();
 }
 
 function pintarPanel() {
@@ -217,6 +228,7 @@ arrancarSync();
 render();
 entrada($('#main'));
 huella.iniciar();
+iniciarTeclado();
 
 // Avisos del dispositivo al abrir la app y al volver a ella
 const avisar = () => revisarAvisos(getEstado(), getFoto()).catch(() => {});

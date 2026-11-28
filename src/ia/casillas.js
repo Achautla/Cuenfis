@@ -4,6 +4,7 @@
 import { getFoto } from '../data/store.js';
 import { reglas, fuente } from '../core/reglas.js';
 import { regimenesEnRango } from '../core/regimen.js';
+import { redondeoSat } from '../core/fiscal.js';
 
 const r2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -73,7 +74,7 @@ export function guiaCasilla(id, periodo) {
   const f = fuente(claveRegla, anio);
   return {
     casilla: etiqueta, declaracion: impuesto === 'anual' ? `Anual ${anio}` : `${impuesto.toUpperCase()} simplificado de confianza ${periodo}`, pestana,
-    valor, valor_en_portal: typeof valor === 'number' ? Math.round(valor) : valor, explicacion,
+    valor, valor_en_portal: typeof valor === 'number' ? redondeoSat(valor) : valor, explicacion,
     fuente: { documento: f.documento, articulo: f.articulo, enlace: f.url }, reglas_provisionales: reglas(anio).provisional,
   };
 }

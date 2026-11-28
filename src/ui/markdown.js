@@ -4,11 +4,14 @@
 import { esc } from './dom.js';
 
 function enLinea(t) {
-  return esc(t)
+  // Los enlaces se apartan primero para que las negritas o cursivas no se metan en su dirección
+  const enlaces = [];
+  const conMarcas = esc(t).replace(/\[([^\]]+)\]\((https:\/\/[^\s)"'<>]+)\)/g, (_, txt, url) => `\u0000${enlaces.push([txt, url]) - 1}\u0000`);
+  const formato = (s) => s
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
-    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<i>$2</i>')
-    .replace(/\[([^\]]+)\]\((https:\/\/[^\s)"']+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<i>$2</i>');
+  return formato(conMarcas).replace(/\u0000(\d+)\u0000/g, (_, i) => `<a href="${enlaces[i][1]}" target="_blank" rel="noopener noreferrer">${formato(enlaces[i][0])}</a>`);
 }
 
 const celdas = (fila) => fila.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
