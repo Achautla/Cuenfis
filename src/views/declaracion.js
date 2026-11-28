@@ -1,7 +1,7 @@
 import { getFoto, getEstado, aplicar } from '../data/store.js';
 import { marcarDeclaracion, guardarAcuse } from '../data/acciones.js';
 import { REGIMENES, categoria } from '../data/catalogo.js';
-import { params } from '../core/fiscal.js';
+import { params, redondeoSat, fechaLimiteMensual } from '../core/fiscal.js';
 import { reglas } from '../core/reglas.js';
 import { chipFuente, avisoProvisional, leyenda } from '../ui/fuente.js';
 import { regimenesEnRango } from '../core/regimen.js';
@@ -25,11 +25,7 @@ const preguntaBtn = (label) => {
 };
 const F = (label, op, v, help = '', tot = false, src = null) => `<div class="f${tot ? ' tot' : ''}"><span>${tot ? `<b>${esc(label)}</b>` : esc(label)}${help ? `<small>${esc(help)}</small>` : ''}${src || ID_POR_ETIQUETA[label] ? `<span class="f-acc">${src ? chipFuente(...src) : ''}${preguntaBtn(label)}</span>` : ''}</span><span class="op">${op}</span><span class="v num">${typeof v === 'number' ? money(v).replace('$', '') : esc(v)}</span></div>`;
 
-function limite(clave) {
-  const [y, m] = clave.split('-').map(Number);
-  const d = new Date(Date.UTC(y, m, 17));
-  return fechaLarga(d.toISOString().slice(0, 10));
-}
+const limite = (clave) => fechaLarga(fechaLimiteMensual(clave));
 
 function estadoMes(m) {
   const cuentas = getEstado().cuentas.filter((c) => !['credito', 'prestamo'].includes(c.tipo)).sort((a, b) => (b.tipo === 'debito') - (a.tipo === 'debito'));
@@ -119,7 +115,7 @@ const PASOS_MENSUAL = [
 function guia(m) {
   const filas = Object.values(CASILLAS).filter((c) => c[0] === 'isr' || c[0] === 'iva');
   const cifras = filas.map((c) => [c[0].toUpperCase(), c[2], c[3](m)]).filter(([, , v]) => typeof v === 'number');
-  const texto = `Declaración ${nombreMes(m.clave)} (estimación Cuenfis)\n` + cifras.map(([t, l, v]) => `${t} · ${l}: ${Math.round(v)}`).join('\n') + `\nTotal a pagar: ${Math.round(m.totalPagar)}`;
+  const texto = `Declaración ${nombreMes(m.clave)} (estimación Cuenfis)\n` + cifras.map(([t, l, v]) => `${t} · ${l}: ${redondeoSat(v)}`).join('\n') + `\nTotal a pagar: ${redondeoSat(m.isrCargo) + redondeoSat(m.ivaCargo)}`;
   return `<details class="card guia" ${m.estado === 'pendiente' ? 'open' : ''}>
     <summary><span class="guia-ico">${icon('file')}</span><span><b>Guía para presentarla en el portal del SAT</b><small>${PASOS_MENSUAL.length} pasos · total estimado a pagar ${money(m.totalPagar)}</small></span></summary>
     <ol class="guia-pasos">${PASOS_MENSUAL.map(([t, d]) => `<li><b>${t}</b><span>${d}</span></li>`).join('')}</ol>
@@ -166,7 +162,7 @@ function iva(m) {
     ${F('Total de IVA a cargo', '(=)', m.ivaTrasladado, '', true)}
     ${F('IVA no cobrado por devoluciones, descuentos y bonificaciones', '(−)', 0)}
     ${F('IVA retenido', '(−)', m.ivaRet, 'Lo que te retuvieron las empresas (2/3 del IVA).', false, ['iva.retencionPM', y])}
-    ${F('IVA acreditable del periodo', '(−)', m.ivaAcred, `Captura manual: IVA de gastos de tu actividad con CFDI y pago bancario (o efectivo hasta ${money(params(y).topeEfectivo)}).`, false, ['topeEfectivo', y])}
+    ${F('IVA acreditable del periodo', '(−)', m.ivaAcred, `Captura manual: IVA de gastos de tu actividad con CFDI y pago bancario (o efectivo hasta ${money(params(y).topeEfectivo)}).${m.ivaAcredNoProporcional ? ` Como parte de tus cobros es exenta, solo se acredita el ${Math.round(m.proporcionAcreditable * 100)}% (no se acreditan ${money(m.ivaAcredNoProporcional)}).` : ''}`, false, ['topeEfectivo', y])}
     ${F('IVA por devoluciones, descuentos y bonificaciones en gastos', '(+)', 0)}
     ${F(m.ivaNeto >= 0 ? 'Cantidad a cargo' : 'Saldo a favor', '(=)', Math.abs(m.ivaNeto), '', true)}
     ${F('Acreditamiento del saldo a favor de periodos anteriores', '(−)', m.favorAplicado, m.favorAnterior ? `Tenías ${money(m.favorAnterior)} a favor de meses anteriores.` : '')}
@@ -231,7 +227,8 @@ function noSumadas(m, foto) {
 export function render(main) {
   const foto = getFoto();
   const meses = Object.values(foto.meses).filter((m) => !m.futuro).sort((a, b) => b.clave.localeCompare(a.clave));
-  const anios = [...new Set([...(foto.perfil.regimenes ?? []).map((r) => +r.desde.slice(0, 4)), +foto.hoy.slice(0, 4)])].sort((a, b) => b - a)
+  const primerAnio = Math.min(+foto.hoy.slice(0, 4), ...(foto.perfil.regimenes ?? []).map((r) => +r.desde.slice(0, 4)));
+  const anios = Array.from({ length: +foto.hoy.slice(0, 4) - primerAnio + 1 }, (_, i) => +foto.hoy.slice(0, 4) - i)
     .filter((y) => regimenesEnRango(foto.perfil, `${y}-01-01`, `${y}-12-31`).some((r) => ['sueldos', 'resico'].includes(r)) || regimenesEnRango(foto.perfil, `${y}-01-01`, `${y}-12-31`).length);
   const tabs = [];
   if (meses.length) tabs.push(['isr', 'ISR RESICO'], ['iva', 'IVA']);

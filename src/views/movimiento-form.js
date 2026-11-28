@@ -1,6 +1,6 @@
 // Captura, detalle y edición de movimientos.
 import { CATEGORIAS, categoria, FORMAS_PAGO, PAGADORES } from '../data/catalogo.js';
-import { categoriasDisponibles } from '../core/regimen.js';
+import { categoriasDisponibles, categoriaDeCobro } from '../core/regimen.js';
 import { calcular } from '../core/motor.js';
 import { leerFoto, guardarFoto, borrarFoto } from '../data/fotos.js';
 import { agregarMovimiento, editarMovimiento, borrarMovimiento, guardarRecurrente, nuevoId } from '../data/acciones.js';
@@ -78,7 +78,11 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     const z = $('#zonaCat', d);
     if (draft.tipo === 'transferencia') { z.innerHTML = ''; draft.categoria = undefined; return; }
     const cats = categoriasDisponibles(perfil, draft.fecha, draft.tipo, CATEGORIAS, mov?.categoria);
-    if (!cats.some((c) => c.id === draft.categoria)) draft.categoria = cats[0]?.id;
+    if (!cats.some((c) => c.id === draft.categoria)) {
+      // Con un régimen de actividad (RESICO...), una entrada nueva empieza como cobro de esa actividad, no como sueldo
+      const cobro = draft.tipo === 'entrada' ? categoriaDeCobro(perfil, draft.fecha, CATEGORIAS) : null;
+      draft.categoria = (cobro && cats.some((c) => c.id === cobro.id) ? cobro.id : cats[0]?.id);
+    }
     z.innerHTML = `<p class="field-label">Categoría</p><div class="catgrid" role="radiogroup" aria-label="Categoría">${cats.map((c) =>
       `<button type="button" role="radio" aria-checked="${c.id === draft.categoria}" data-c="${c.id}"><span class="avatar" style="background:${c.color}">${icon(c.icono)}</span><span>${esc(c.nombre)}</span></button>`).join('')}</div>`;
   };

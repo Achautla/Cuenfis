@@ -39,7 +39,7 @@ export function render(main) {
           <span class="row">${r.hasta ? '' : `<input type="date" data-fin="${i}" aria-label="Fecha de fin" value="${foto.hoy}" /><button class="btn sm" data-terminar="${i}">Terminar</button>`}<button class="btn ghost icon sm" data-quitar="${i}" aria-label="Quitar">${icon('trash')}</button></span></li>`).join('')}</ul>
         <form id="fReg" class="row add-row">
           <select name="reg" aria-label="Régimen">${Object.entries(REGIMENES).map(([k, r]) => `<option value="${k}">${esc(r.corto)}</option>`).join('')}</select>
-          <input type="date" name="desde" required value="${foto.hoy}" aria-label="Desde" />
+          <input type="date" name="desde" required value="${foto.hoy.slice(0, 8)}01" aria-label="Desde" />
           <button class="btn">${icon('plus')}Agregar</button>
         </form>
       </div>

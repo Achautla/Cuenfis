@@ -87,7 +87,7 @@ export function render(main) {
         <div><span>${icon('wallet')}En cuentas</span><b class="num">${money(b.tengo)}</b></div>
         <div><span>${icon('credit-card')}Tarjetas y préstamos</span><b class="num">${money(b.deudas)}</b></div>
         ${conResico ? `<div><span>${icon('landmark')}Bolsa SAT por pagar</span><b class="num">${money(b.bolsa)}</b></div>` : ''}
-        ${b.favorIva ? `<div><span>${icon('check-circle')}Saldo a favor de IVA</span><b class="num">−${money(b.favorIva)}</b></div>` : ''}
+        ${b.favorIva ? `<div><span>${icon('check-circle')}Saldo a favor de IVA</span><b class="num">${money(b.favorIva)}</b></div>` : ''}
       </div>
     </div>
 

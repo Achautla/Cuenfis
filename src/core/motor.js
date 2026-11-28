@@ -59,9 +59,13 @@ export function calcular(estado, hoy) {
       const ivaRet = suma(cobros, (m) => m.d.ivaRet);
       // Entradas del mes que NO se suman a la declaración: "Otro ingreso" o cobros con fecha fuera del régimen
       const noSumadas = activo ? delMes.filter((m) => m.tipo === 'entrada' && !(m.d.fiscal && m.d.regimen === 'resico')
-        && ((m.d.clase === 'libre' && vigente(perfil, 'resico', m.fecha)) || (m.d.regimen === 'resico' && !m.d.fiscal))) : [];
+        && (m.d.clase === 'libre' || (m.d.regimen === 'resico' && !m.d.fiscal))) : [];
       const gastosAct = delMes.filter((m) => m.tipo === 'salida' && m.d.clase === 'actividad');
-      const ivaAcred = activo ? suma(gastosAct, (m) => m.d.ivaAcreditable) : 0;
+      // Arts. 4 y 5 LIVA: con ingresos exentos, solo se acredita la parte del IVA que corresponde a lo gravado
+      const exentos = suma(cobros.filter((m) => m.d.exento), (m) => m.d.subtotal);
+      const proporcion = total > 0 ? r2((total - exentos) / total * 10000) / 10000 : 1;
+      const ivaAcredTotal = activo ? suma(gastosAct, (m) => m.d.ivaAcreditable) : 0;
+      const ivaAcred = r2(ivaAcredTotal * proporcion);
       const ivaNeto = r2(ivaTrasladado - ivaRet - ivaAcred);
       const favorAnterior = favorIva;
       let ivaCargo = 0, favorAplicado = 0;
@@ -77,13 +81,14 @@ export function calcular(estado, hoy) {
 
       const dec = decls[k];
       const totalPagar = r2(isrCargo + ivaCargo);
-      if (dec?.estado === 'pagada' && Math.abs((dec.monto ?? 0) - totalPagar) > 1) {
-        avisos.push({ nivel: 'alerta', mes: k, texto: `Cambiaste movimientos de ${k} después de marcar su declaración como pagada. Tal vez debas presentar una complementaria.` });
+      if ((dec?.estado === 'pagada' || dec?.estado === 'presentada') && Math.abs((dec.monto ?? 0) - totalPagar) > 1) {
+        avisos.push({ nivel: 'alerta', mes: k, texto: `Cambiaste movimientos de ${k} después de marcar su declaración como ${dec.estado}. Tal vez debas presentar una complementaria.` });
       }
       if (activo || cobros.length) {
         meses[k] = { clave: k, activo, cobros: cobros.map((m) => m.id), total, tasa, isrDet, isrRet, isrCargo,
           isrFavor: r2(Math.max(0, isrRet - isrDet)), g16, g8, g0, ivaTrasladado, ivaRet, ivaAcred,
           ivaNeto, favorAnterior, favorAplicado, ivaCargo, favorSiguiente: favorIva, totalPagar,
+          exentos, proporcionAcreditable: proporcion, ivaAcredNoProporcional: r2(ivaAcredTotal - ivaAcred),
           noSumadas: noSumadas.map((m) => m.id), noSumadasTotal: suma(noSumadas, (m) => m.monto),
           acredNo: gastosAct.filter((m) => !m.d.ivaAcreditable).map((m) => m.id),
           estado: dec?.estado ?? 'pendiente', declaracion: dec ?? null, cerrado: k < ym(hoy), futuro: k > ym(hoy) };
@@ -129,13 +134,22 @@ export function calcular(estado, hoy) {
   });
 
   // 5. Balance: Tengo, Debo, Disponible real
-  const mesesPend = Object.values(meses).filter((x) => !x.futuro && x.estado !== 'pagada');
-  const bolsaIsr = suma(mesesPend, (x) => x.isrCargo);
-  const bolsaIva = suma(mesesPend, (x) => x.ivaCargo);
+  const mesesPend = Object.values(meses).filter((x) => !x.futuro);
+  // De un mes pagado solo queda pendiente lo que subió después de pagarlo (complementaria)
+  const faltante = (x, campo, total) => {
+    if (x.estado !== 'pagada') return x[campo];
+    const pagado = Number(x.declaracion?.[campo === 'isrCargo' ? 'isr' : 'iva']);
+    if (Number.isFinite(pagado)) return Math.max(0, r2(x[campo] - pagado));
+    const extra = Math.max(0, r2(x.totalPagar - (Number(x.declaracion?.monto) || 0)));
+    return total ? r2(extra * x[campo] / total) : 0;
+  };
+  const bolsaIsr = suma(mesesPend, (x) => faltante(x, 'isrCargo', x.totalPagar));
+  const bolsaIva = suma(mesesPend, (x) => faltante(x, 'ivaCargo', x.totalPagar));
   const tengo = suma(saldoCuentas.filter((c) => !c.esDeuda), (c) => c.saldo);
   const deudas = suma(saldoCuentas.filter((c) => c.esDeuda), (c) => c.saldo);
   const bolsa = r2(bolsaIsr + bolsaIva);
-  const debo = r2(deudas + bolsa - favorIva);
+  // El IVA a favor no es dinero disponible: se recupera solo al acreditarlo o pedir devolución. Se muestra aparte.
+  const debo = r2(deudas + bolsa);
   const balance = { tengo, deudas, bolsa, bolsaIsr, bolsaIva, favorIva, debo, disponible: r2(tengo - debo),
     inicial: r2(suma(cuentas.filter((c) => TIPOS_CUENTA[c.tipo]?.activo ?? true), (c) => +c.saldoInicial) - suma(cuentas.filter((c) => !(TIPOS_CUENTA[c.tipo]?.activo ?? true)), (c) => +c.saldoInicial)) };
 
@@ -145,10 +159,13 @@ export function calcular(estado, hoy) {
   const pendientesCfdi = movs.filter((m) => !m.cfdi && ((m.tipo === 'salida' && ['deduccion', 'actividad'].includes(m.d.clase)) || (m.tipo === 'entrada' && m.d.fiscal && m.d.regimen !== 'sueldos')));
   const anios = [...new Set(movs.map((m) => +m.fecha.slice(0, 4)))];
   for (const y of anios) {
-    const res = suma(movs.filter((m) => m.fecha.startsWith(String(y)) && m.d.fiscal && m.d.regimen === 'resico'), (m) => m.d.subtotal);
+    const delAnio = movs.filter((m) => m.fecha.startsWith(String(y)) && m.d.fiscal);
+    if (!delAnio.some((m) => m.d.regimen === 'resico')) continue;
+    // Art. 113-E LISR: el tope de 3.5 millones considera todos los ingresos del año (también sueldos)
+    const res = suma(delAnio.filter((m) => m.d.regimen === 'resico' || m.d.regimen === 'sueldos'), (m) => (m.d.regimen === 'sueldos' ? m.d.bruto : m.d.subtotal));
     const lim = params(y).resico.limiteAnual;
-    if (res > lim) avisos.push({ nivel: 'alerta', texto: `Tus ingresos RESICO de ${y} pasan de $${lim.toLocaleString('es-MX')}. Debes salir del régimen.` });
-    else if (res > lim * 0.8) avisos.push({ nivel: 'info', texto: `Llevas el ${Math.round(res / lim * 100)}% del límite anual de RESICO en ${y}.` });
+    if (res > lim) avisos.push({ nivel: 'alerta', texto: `Tus ingresos de ${y} (RESICO más sueldos) pasan de $${lim.toLocaleString('es-MX')}. Debes salir de RESICO.` });
+    else if (res > lim * 0.8) avisos.push({ nivel: 'info', texto: `Llevas el ${Math.round(res / lim * 100)}% del límite anual de RESICO en ${y} (cuentan también tus sueldos).` });
   }
 
   const foto = { hoy, perfil, movs, meses, cuentas: saldoCuentas, balance, avisos, pendientesCfdi };

@@ -37,11 +37,11 @@ export function desglosar(mov, perfil) {
 
     if (cat.reg === 'sueldos') {
       const dado = Number(mov.sueldoBruto) > 0;
-      const bruto = dado ? Number(mov.sueldoBruto) : estimarBrutoDesdeNeto(monto, p);
-      const isrRet = mov.isrRetenidoNomina != null && mov.isrRetenidoNomina !== ''
-        ? Number(mov.isrRetenidoNomina)
-        : dado ? isrRetenidoNomina(bruto, p) : r2(bruto - monto);
-      return { ...out, subtotal: bruto, bruto, isrRet: r2(isrRet), estimado: !dado };
+      const isrDado = mov.isrRetenidoNomina != null && mov.isrRetenidoNomina !== '' && Number.isFinite(Number(mov.isrRetenidoNomina));
+      // Con el ISR del recibo pero sin el bruto, el bruto es lo depositado más lo retenido
+      const bruto = dado ? Number(mov.sueldoBruto) : isrDado ? r2(monto + Number(mov.isrRetenidoNomina)) : estimarBrutoDesdeNeto(monto, p);
+      const isrRet = isrDado ? Number(mov.isrRetenidoNomina) : dado ? isrRetenidoNomina(bruto, p) : r2(bruto - monto);
+      return { ...out, subtotal: bruto, bruto, isrRet: r2(isrRet), estimado: !dado && !isrDado };
     }
 
     const t = tasa(mov.tasaIva ?? (perfil?.frontera ? 0.08 : 0.16));
@@ -52,7 +52,7 @@ export function desglosar(mov, perfil) {
     const ivaRet = aj.ivaRet ?? (pag === 'pm' ? r2(iva * p.iva.retencionPM) : 0);
     if (!REGIMENES[cat.reg].calculo) out.motivos.push('El cálculo de impuestos de este régimen llega en una fase posterior.');
     if (!mov.cfdi) out.motivos.push('Emite tu factura (CFDI) por este cobro.');
-    return { ...out, subtotal, iva, isrRet, ivaRet };
+    return { ...out, subtotal, iva, isrRet, ivaRet, exento: (mov.tasaIva ?? null) === 'exento' };
   }
 
   // Salidas

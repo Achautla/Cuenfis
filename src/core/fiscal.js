@@ -9,6 +9,24 @@ export function params(anio) {
 export const r2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
 export const umaAnual = (p) => p.uma.diaria * 365;
 
+/** Redondeo del art. 20 CFF: de 1 a 50 centavos baja al peso; de 51 a 99 sube. */
+export function redondeoSat(x) {
+  const n = r2(Number(x) || 0);
+  const ent = Math.floor(n);
+  return r2(n - ent) <= 0.5 ? ent : ent + 1;
+}
+
+/**
+ * Fecha límite de la declaración mensual de `clave` (AAAA-MM): el día que marca la ley del mes siguiente.
+ * Si cae en sábado o domingo se recorre al siguiente día hábil (art. 12 CFF). Los días festivos no se consideran.
+ */
+export function fechaLimiteMensual(clave) {
+  const [y, m] = clave.split('-').map(Number);
+  const d = new Date(Date.UTC(y, m, params(y + (m === 12 ? 1 : 0)).diaLimiteMensual ?? 17));
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
 /** Tasa RESICO mensual según el total del mes (se aplica a todo el ingreso). */
 export function tasaResicoMensual(total, p) {
   if (total <= 0) return 0;

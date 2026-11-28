@@ -11,7 +11,8 @@ export function render(main) {
   const b = foto.balance;
   const activos = foto.cuentas.filter((c) => !c.esDeuda);
   const deudas = foto.cuentas.filter((c) => c.esDeuda);
-  const pendientes = Object.values(foto.meses).filter((m) => !m.futuro && m.estado !== 'pagada' && m.totalPagar > 0).sort((x, y) => x.clave.localeCompare(y.clave));
+  const extraPagada = (m) => Math.max(0, Math.round((m.totalPagar - (Number(m.declaracion?.monto) || 0)) * 100) / 100);
+  const pendientes = Object.values(foto.meses).filter((m) => !m.futuro && (m.estado !== 'pagada' ? m.totalPagar > 0 : extraPagada(m) > 1)).sort((x, y) => x.clave.localeCompare(y.clave));
   const tuvoResico = Object.keys(foto.meses).length > 0;
   const y = +foto.hoy.slice(0, 4);
   // Anual de sueldos: el ejercicio que se presenta en el próximo abril
@@ -42,9 +43,9 @@ export function render(main) {
         <div class="card-head"><h2>Lo que debo</h2><span class="spacer"></span><b class="num">${money(b.debo)}</b></div>
         <ul class="b-list">
           ${deudas.map((c) => fila(TIPOS_CUENTA[c.tipo]?.icono ?? 'credit-card', c.nombre, esc(TIPOS_CUENTA[c.tipo]?.nombre ?? ''), c.saldo)).join('')}
-          ${pendientes.map((m) => fila('landmark', `SAT · ${nombreMes(m.clave)}`, `ISR ${money(m.isrCargo)} · IVA ${money(m.ivaCargo)}${m.estado === 'presentada' ? ' · presentada, falta pagar' : ''}${m.futuro ? '' : m.cerrado ? '' : ' · mes en curso'}`, m.totalPagar)).join('')}
-          ${b.favorIva ? fila('check-circle', 'Saldo a favor de IVA', 'Se descuenta de tus próximas declaraciones', -b.favorIva, 'pos') : ''}
-          ${!deudas.length && !pendientes.length && !b.favorIva ? '<li class="muted">No debes nada. Muy bien.</li>' : ''}
+          ${pendientes.map((m) => fila('landmark', `SAT · ${nombreMes(m.clave)}`, m.estado === 'pagada' ? 'Cambió después de pagarla: quizá debas presentar una complementaria' : `ISR ${money(m.isrCargo)} · IVA ${money(m.ivaCargo)}${m.estado === 'presentada' ? ' · presentada, falta pagar' : ''}${m.futuro ? '' : m.cerrado ? '' : ' · mes en curso'}`, m.estado === 'pagada' ? extraPagada(m) : m.totalPagar)).join('')}
+          ${!deudas.length && !pendientes.length ? '<li class="muted">No debes nada. Muy bien.</li>' : ''}
+          ${b.favorIva ? fila('check-circle', 'Saldo a favor de IVA (aparte)', 'No es dinero disponible: se descuenta de tu IVA de los próximos meses o puedes pedir su devolución.', b.favorIva, 'pos') : ''}
         </ul>
         ${pendientes.length ? `<a class="btn sm" href="#/declaracion" style="margin-top:12px">${icon('file')}Ir a Mi declaración</a>` : ''}
       </div>
