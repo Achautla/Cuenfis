@@ -1,6 +1,6 @@
 import { getFoto, getEstado, aplicar } from '../data/store.js';
 import { marcarDeclaracion, guardarAcuse } from '../data/acciones.js';
-import { REGIMENES, categoria } from '../data/catalogo.js';
+import { REGIMENES, categoria, NIVELES_COLEGIATURA } from '../data/catalogo.js';
 import { params, redondeoSat, fechaLimiteMensual } from '../core/fiscal.js';
 import { reglas } from '../core/reglas.js';
 import { chipFuente, avisoProvisional, leyenda } from '../ui/fuente.js';
@@ -188,7 +188,7 @@ function anual(y) {
       ${F('Médicas, dentales, hospital y seguro', '', ded.general, `Tope: el menor entre ${p.deducciones.umasAnuales} UMA anuales y ${pct(p.deducciones.porcentajeIngresos)} de tus ingresos = ${money(ded.limGeneral)}.`, false, ['deducciones', y])}
       ${ded.afore ? F('Aportaciones voluntarias al retiro', '', ded.afore, `Tope propio: ${money(ded.limAfore)}.`, false, ['deducciones.afore', y]) : ''}
       ${ded.donativos ? F('Donativos', '', ded.donativos, `Tope: ${pct(p.deducciones.donativos.porcentajeIngresos)} de tus ingresos = ${money(ded.limDonativos)}.`, false, ['deducciones.donativos', y]) : ''}
-      ${ded.colegiaturas ? F('Colegiaturas (estímulo)', '', ded.colegiaturas, `Tope por alumno y nivel; se aplica el de bachillerato (${money(ded.topeColegiatura)}). Confirma el nivel.`, false, ['deducciones.colegiaturas', y]) : ''}
+      ${ded.colegiaturas ? F('Colegiaturas (estímulo)', '', ded.aplicables.colegiaturas, `Pagaste ${money(ded.colegiaturas)}. Tope por alumno y nivel: ${ded.alumnos.map((a) => `${a.alumno || 'sin nombre'} (${a.nivel ? NIVELES_COLEGIATURA[a.nivel] : 'sin nivel, se usa bachillerato'}) ${money(a.aplicable)} de ${money(a.tope)}`).join('; ')}.${ded.alumnos.some((a) => !a.alumno || !a.nivel) ? ' Anota alumno y nivel en cada colegiatura para aplicar el tope correcto.' : ''}`, false, ['deducciones.colegiaturas', y]) : ''}
       ${F('Deducciones aplicables', '(=)', ded.total, `${ded.deducibles.length} de ${ded.lista.length} gastos cumplen requisitos (CFDI y pago bancario).`, true)}
       <p class="tabn">Cálculo</p>
       ${F('Base gravable', '(=)', an.base, 'Ingresos menos deducciones.')}
@@ -209,8 +209,25 @@ function anual(y) {
       ? `Si presentaste todas tus declaraciones mensuales, la regla 3.13.7 de la ${esc(reglas(y).p.publicaciones?.rmf ?? 'RMF')} te releva de la anual por RESICO. Puedes presentarla de forma opcional para aplicar deducciones personales (reglas 3.13.20 y 3.13.21): consúltalo con un contador.`
       : 'Tus ingresos RESICO se informan, pero no se suman a la base de tus sueldos: sus pagos mensuales son definitivos.'}</span></div>`;
   }
+  h += otrosIngresos(an, y);
   if (an.regimenesSinCalculo.length) h += `<div class="notice warn">${icon('clock')}<span>El cálculo de ${esc(an.regimenesSinCalculo.map((r) => REGIMENES[r].corto).join(', '))} llega en una fase posterior. Sus movimientos ya se guardan.</span></div>`;
   return h || `<div class="empty">${icon('file')}<p>No tuviste régimenes con declaración en ${y}.</p></div>`;
+}
+
+/** Otros ingresos (préstamos, regalos, ventas personales...): qué se informa o se declara en la anual. Estimado. */
+function otrosIngresos(an, y) {
+  const o = an.otrosIngresos;
+  if (!o?.total) return '';
+  const puntos = [];
+  if (o.informarArt90) puntos.push(`Tus préstamos, regalos y premios de ${y} suman ${money(o.art90)}: pasan de ${money(o.limiteArt90)}, así que <b>debes informarlos en tu anual</b> (art. 90 LISR).`);
+  if (o.informarExentos) puntos.push(`Tus ingresos exentos (regalos, herencias, venta de tu casa) suman ${money(o.exentos)}: pasan de ${money(o.limiteExentos)}, así que <b>se informan en tu anual</b> (art. 150 LISR).`);
+  if (o.regaloGravado > 0) puntos.push(`Los regalos de personas que no son tu familia directa suman ${money(o.regaloOtro)}. Solo están exentos ${money(o.topeRegalo)} (3 UMA anuales); <b>${money(o.regaloGravado)} serían ingreso que se declara en la anual</b>.`);
+  if (o.intereses) puntos.push('Registraste intereses o rendimientos: pide la constancia de tu banco; los intereses reales se consideran en la anual.');
+  if (o.comoActividad) puntos.push(`${o.comoActividad === 1 ? 'Una entrada marcada' : `${o.comoActividad} entradas marcadas`} como «pago por mi trabajo» siguen como Otro ingreso: cámbialas a la categoría de cobro de tu régimen para que cuenten.`);
+  if (o.sinExplicar) puntos.push(`${o.sinExplicar === 1 ? 'Una entrada' : `${o.sinExplicar} entradas`} de Otro ingreso no dicen qué son. Ábrelas y elige «¿Qué es este dinero?»: si el SAT ve depósitos que no declaras, puede pedirte que los expliques (art. 91 LISR).`);
+  if (!puntos.length) return `<div class="notice">${icon('info')}<span>Tus otros ingresos de ${y} (${money(o.total)}) están explicados y no pasan de los límites para informarlos en la anual.</span></div>`;
+  const grave = o.informarArt90 || o.informarExentos || o.regaloGravado > 0;
+  return `<div class="notice ${grave ? 'warn' : ''}">${icon(grave ? 'alert' : 'info')}<span><b>Otros ingresos de ${y}: ${money(o.total)}</b><ul class="decl-nosum-lista">${puntos.map((t) => `<li><span>${t}</span></li>`).join('')}</ul></span></div>`;
 }
 
 /** Entradas del mes que no entran a la declaración: el usuario decide si son cobros de su actividad. */
@@ -219,8 +236,8 @@ function noSumadas(m, foto) {
   const movs = m.noSumadas.map((id) => foto.movs.find((x) => x.id === id)).filter(Boolean);
   return `<div class="notice warn decl-nosum">${icon('alert')}<span>
     <b>${movs.length === 1 ? 'Una entrada' : `${movs.length} entradas`} de ${esc(nombreMes(m.clave))} por ${money(m.noSumadasTotal)} no ${movs.length === 1 ? 'se suma' : 'se suman'} a esta declaración.</b>
-    Solo cuentan los movimientos con la categoría «Cobro RESICO» y con fecha dentro de tu régimen. Si alguna es un pago por tu trabajo o tus ventas, ábrela y cámbiala a Cobro RESICO; si dice «fecha fuera de tu régimen», corrige su fecha o la fecha de alta del régimen en Ajustes. Si es un regalo, un préstamo o una venta personal ocasional, está bien como está.
-    <ul class="decl-nosum-lista">${movs.map((x) => `<li><span>${esc(fechaCorta(x.fecha))} · ${esc(x.nota || x.contraparte || categoria(x.categoria).nombre)}${x.d.regimen === 'resico' && !x.d.fiscal ? ' · <i>fecha fuera de tu régimen</i>' : ''}</span><b>${money(x.monto)}</b><button type="button" class="btn sm" data-revisar="${esc(x.id)}">Revisar</button></li>`).join('')}</ul>
+    Solo cuentan los movimientos con la categoría «Cobro RESICO» y con fecha dentro de tu régimen. Si alguna es un pago por tu trabajo o tus ventas, ábrela y cámbiala a Cobro RESICO; si dice «fecha fuera de tu régimen», corrige su fecha o la fecha de alta del régimen en Ajustes. Si es un regalo, un préstamo o una venta personal, ábrela y elige qué es: dejará de aparecer aquí.
+    <ul class="decl-nosum-lista">${movs.map((x) => `<li><span>${esc(fechaCorta(x.fecha))} · ${esc(x.nota || x.contraparte || categoria(x.categoria).nombre)}${x.d.clase === 'ingreso' && !x.d.fiscal ? ` · <i>${x.d.regimen === 'resico' ? 'fecha fuera de tu régimen' : `no estabas en ${esc(REGIMENES[x.d.regimen]?.corto ?? 'ese régimen')} en esa fecha`}</i>` : ''}</span><b>${money(x.monto)}</b><button type="button" class="btn sm" data-revisar="${esc(x.id)}">Revisar</button></li>`).join('')}</ul>
   </span></div>`;
 }
 

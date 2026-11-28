@@ -1,9 +1,9 @@
 // Motor único: a partir del estado (perfil, cuentas, movimientos, declaraciones) produce
 // una sola "foto" que leen todas las pantallas. Así Inicio, Movimientos, Indicadores,
 // Declaración y Reportes nunca se contradicen.
-import { categoria, TIPOS_CUENTA, REGIMENES } from '../data/catalogo.js';
+import { categoria, TIPOS_CUENTA, REGIMENES, ORIGENES_LIBRE } from '../data/catalogo.js';
 import { desglosar } from './desglose.js';
-import { params, r2, tasaResicoMensual, isrTarifa, umaAnual } from './fiscal.js';
+import { params, r2, tasaResicoMensual, isrTarifa, umaAnual, estimarBrutoDesdeNeto } from './fiscal.js';
 import { vigente, vigenteEnRango, regimenesEnRango } from './regimen.js';
 
 export const ym = (fecha) => fecha.slice(0, 7);
@@ -34,6 +34,20 @@ export function calcular(estado, hoy) {
     .map((m) => ({ ...m, monto: Number(m.monto) || 0, d: desglosar(m, perfil) }))
     .sort((a, b) => a.fecha.localeCompare(b.fecha) || String(a.id).localeCompare(String(b.id)));
 
+  // 1b. Sueldo sin recibo cobrado por quincena o semana: el ISR se estima con lo de todo el mes.
+  // Estimar cada depósito con la tarifa mensual daría un ISR más bajo y una anual "a cargo" falsa.
+  const sueldoEst = {};
+  for (const m of movs) if (m.d.regimen === 'sueldos' && m.d.estimado && m.d.fiscal) (sueldoEst[ym(m.fecha)] ??= []).push(m);
+  for (const [k, ms] of Object.entries(sueldoEst)) {
+    if (ms.length < 2) continue;
+    const neto = suma(ms, (m) => m.monto);
+    const bruto = estimarBrutoDesdeNeto(neto, params(+k.slice(0, 4)));
+    for (const m of ms) {
+      const b = r2(bruto * m.monto / neto);
+      m.d = { ...m.d, subtotal: b, bruto: b, isrRet: r2(b - m.monto) };
+    }
+  }
+
   // 2. Meses RESICO: ISR e IVA (pagos mensuales definitivos)
   const meses = {};
   const fechasRes = (perfil.regimenes ?? []).filter((r) => r.reg === 'resico').map((r) => r.desde);
@@ -58,8 +72,9 @@ export function calcular(estado, hoy) {
       const ivaTrasladado = suma(cobros, (m) => m.d.iva);
       const ivaRet = suma(cobros, (m) => m.d.ivaRet);
       // Entradas del mes que NO se suman a la declaración: "Otro ingreso" o cobros con fecha fuera del régimen
+      const explicada = (m) => m.d.clase === 'libre' && m.origen && !['actividad', 'otro'].includes(m.origen) && ORIGENES_LIBRE[m.origen];
       const noSumadas = activo ? delMes.filter((m) => m.tipo === 'entrada' && !(m.d.fiscal && m.d.regimen === 'resico')
-        && (m.d.clase === 'libre' || (m.d.regimen === 'resico' && !m.d.fiscal))) : [];
+        && ((m.d.clase === 'libre' && !explicada(m)) || (m.d.clase === 'ingreso' && !m.d.fiscal))) : [];
       const gastosAct = delMes.filter((m) => m.tipo === 'salida' && m.d.clase === 'actividad');
       // Arts. 4 y 5 LIVA: con ingresos exentos, solo se acredita la parte del IVA que corresponde a lo gravado
       const exentos = suma(cobros.filter((m) => m.d.exento), (m) => m.d.subtotal);
@@ -228,16 +243,30 @@ export function anual(foto, y) {
   const afore = grupo(['afore']);
   const donativos = grupo(['donativos']);
   const colegiaturas = grupo(['colegiaturas']);
+  // Estímulo de colegiaturas: tope anual por alumno según su nivel. Sin nivel se usa el de bachillerato (el más alto).
+  const topes = p.deducciones.colegiaturas;
+  const porAlumno = {};
+  for (const m of ok.filter((x) => x.categoria === 'colegiaturas')) {
+    const nivel = topes[m.nivel] ? m.nivel : null;
+    const k = `${(m.alumno ?? '').trim().toLowerCase()}|${nivel ?? ''}`;
+    porAlumno[k] ??= { alumno: (m.alumno ?? '').trim(), nivel, pagado: 0 };
+    porAlumno[k].pagado = r2(porAlumno[k].pagado + m.monto);
+  }
+  const alumnos = Object.values(porAlumno).map((a) => {
+    const tope = topes[a.nivel ?? 'bachillerato'];
+    return { ...a, tope, aplicable: r2(Math.min(a.pagado, tope)) };
+  });
+  const colegiaturasAplicables = r2(alumnos.reduce((s, a) => s + a.aplicable, 0));
   const ingresos = ingresosSueldos; // ingresos que se acumulan en la anual que calculamos
   const limGeneral = r2(Math.min(umaAnual(p) * p.deducciones.umasAnuales, ingresos * p.deducciones.porcentajeIngresos));
   const limAfore = r2(Math.min(ingresos * p.deducciones.afore.porcentajeIngresos, umaAnual(p) * p.deducciones.afore.umasAnuales));
   const limDonativos = r2(ingresos * p.deducciones.donativos.porcentajeIngresos);
-  const topeColegiatura = p.deducciones.colegiaturas.bachillerato; // tope por alumno y nivel; se usa el de bachillerato
+  const topeColegiatura = topes.bachillerato;
   const aplicables = {
     general: Math.min(general, limGeneral),
     afore: Math.min(afore, limAfore),
     donativos: Math.min(donativos, limDonativos),
-    colegiaturas: Math.min(colegiaturas, topeColegiatura),
+    colegiaturas: colegiaturasAplicables,
   };
   const totalDeducible = r2(Object.values(aplicables).reduce((s, x) => s + x, 0));
   const base = r2(Math.max(0, ingresos - totalDeducible));
@@ -248,6 +277,24 @@ export function anual(foto, y) {
   const isrSinDed = isrTarifa(ingresos, p.tarifaAnual);
 
   const mesesRes = Object.values(foto.meses).filter((x) => x.clave.startsWith(String(y)));
+
+  // Otros ingresos explicados por el usuario: qué se informa o se declara en la anual (estimado)
+  const libres = ms.filter((m) => m.tipo === 'entrada' && m.d.clase === 'libre');
+  const deGrupo = (gs) => suma(libres.filter((m) => gs.includes(ORIGENES_LIBRE[m.origen]?.grupo)), (m) => m.monto);
+  const inf = { prestamosDonativosPremios: 600_000, exentos: 500_000, umasDonativos: 3, ...(p.informativos ?? {}) };
+  const art90 = deGrupo(['prestamos', 'donativos', 'premios']);
+  const exentosInf = deGrupo(['exentos', 'donativos']);
+  const regaloOtro = suma(libres.filter((m) => m.origen === 'regalo_otro'), (m) => m.monto);
+  const topeRegalo = r2(umaAnual(p) * inf.umasDonativos);
+  const otrosIngresos = {
+    total: suma(libres, (m) => m.monto),
+    sinExplicar: libres.filter((m) => !ORIGENES_LIBRE[m.origen] || m.origen === 'otro').length,
+    comoActividad: libres.filter((m) => m.origen === 'actividad').length,
+    art90, limiteArt90: inf.prestamosDonativosPremios, informarArt90: art90 > inf.prestamosDonativosPremios,
+    exentos: exentosInf, limiteExentos: inf.exentos, informarExentos: exentosInf > inf.exentos,
+    regaloOtro, topeRegalo, regaloGravado: r2(Math.max(0, regaloOtro - topeRegalo)),
+    intereses: libres.some((m) => m.origen === 'intereses'),
+  };
   const tieneSueldos = regs.includes('sueldos');
   const tieneResico = regs.includes('resico');
   const otros = regs.filter((r) => r !== 'sueldos');
@@ -256,13 +303,14 @@ export function anual(foto, y) {
   return {
     anio: y, regs, tieneSueldos, tieneResico,
     sueldos: { ingresos: ingresosSueldos, isrRetenido, estimado, recibos: sueldos.length },
-    deducciones: { lista: ded, deducibles: ok, general, afore, donativos, colegiaturas,
+    deducciones: { lista: ded, deducibles: ok, general, afore, donativos, colegiaturas, alumnos,
       limGeneral, limAfore, limDonativos, topeColegiatura, aplicables, total: totalDeducible },
     base, isrAnual, isrSinDed, ahorroPorDeducciones: r2(isrSinDed - isrAnual), diferencia,
     aCargo: Math.max(0, diferencia), aFavor: Math.max(0, -diferencia), obligado,
     resico: { ingresos: suma(mesesRes, (x) => x.total), isrPagos: suma(mesesRes, (x) => x.isrDet), meses: mesesRes.length,
       limite: p.resico.limiteAnual },
     soloResico: tieneResico && !tieneSueldos && otros.every((r) => r === 'resico'),
+    otrosIngresos,
     regimenesSinCalculo: regs.filter((r) => !REGIMENES[r]?.calculo),
   };
 }

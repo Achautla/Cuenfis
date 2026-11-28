@@ -1,5 +1,5 @@
 // Captura, detalle y edición de movimientos.
-import { CATEGORIAS, categoria, FORMAS_PAGO, PAGADORES } from '../data/catalogo.js';
+import { CATEGORIAS, categoria, FORMAS_PAGO, PAGADORES, ORIGENES_LIBRE, NIVELES_COLEGIATURA } from '../data/catalogo.js';
 import { categoriasDisponibles, categoriaDeCobro } from '../core/regimen.js';
 import { calcular } from '../core/motor.js';
 import { leerFoto, guardarFoto, borrarFoto } from '../data/fotos.js';
@@ -75,6 +75,8 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     if (fd.has('tasaIva')) { const v = fd.get('tasaIva'); draft.tasaIva = v === 'exento' ? 'exento' : Number(v); }
     draft.cfdi = fd.has('cfdi') ? true : (f.querySelector('[name=cfdi]') ? false : draft.cfdi);
     for (const k of ['sueldoBruto', 'isrRetenidoNomina']) if (fd.has(k)) draft[k] = fd.get(k) === '' ? undefined : Number(fd.get(k));
+    // Solo se guardan si la categoría los pide: qué es un Otro ingreso, y alumno y nivel de una colegiatura
+    for (const k of ['origen', 'alumno', 'nivel']) draft[k] = fd.has(k) && fd.get(k) !== '' ? String(fd.get(k)).trim() : undefined;
     if (f.querySelector('[name=aj_subtotal]')) {
       const aj = {};
       for (const k of ['subtotal', 'iva', 'isrRet', 'ivaRet']) { const v = fd.get('aj_' + k); if (v !== '' && v != null) aj[k] = Number(v); }
@@ -100,6 +102,20 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
     const cat = draft.categoria ? categoria(draft.categoria) : null;
     let h = '';
     if (cat?.tip) h += `<div class="notice">${icon('info')}<span>${esc(cat.tip)}</span></div>`;
+    if (cat?.id === 'otro_ingreso') {
+      const o = ORIGENES_LIBRE[draft.origen];
+      const cobro = categoriaDeCobro(perfil, draft.fecha, CATEGORIAS);
+      h += `<label class="field"><span>¿Qué es este dinero?</span><select name="origen"><option value="">Elige una opción</option>${Object.entries(ORIGENES_LIBRE).map(([k, x]) =>
+        `<option value="${k}" ${draft.origen === k ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('')}</select>
+        ${o ? `<span class="hint">${esc(o.texto)} Es una guía general: confírmalo con el SAT o con un contador.</span>` : '<span class="hint">Con esto sabemos si se declara, si está exento o si solo se informa en tu anual.</span>'}</label>`;
+      if (draft.origen === 'actividad' && cobro) h += `<button type="button" class="btn sm" data-c="${cobro.id}" style="margin:-6px 0 14px">${icon('receipt')}Cambiar a ${esc(cobro.nombre)}</button>`;
+    }
+    if (cat?.id === 'colegiaturas') {
+      h += `<div class="cols-2"><label class="field"><span>Alumno</span><input name="alumno" maxlength="40" value="${esc(draft.alumno ?? '')}" placeholder="Nombre corto, por ejemplo Sofi" /></label>
+        <label class="field"><span>Nivel</span><select name="nivel"><option value="">Elige el nivel</option>${Object.entries(NIVELES_COLEGIATURA).map(([k, t]) =>
+          `<option value="${k}" ${draft.nivel === k ? 'selected' : ''}>${t}</option>`).join('')}</select></label></div>
+        <p class="hint" style="margin:-6px 0 14px">El tope del estímulo es por alumno y por nivel, al año.</p>`;
+    }
     if (draft.tipo === 'transferencia') {
       h += `<label class="field"><span>Cuenta destino</span><select name="cuentaDestino">${getEstado().cuentas.filter((c) => c.id !== draft.cuenta).map((c) => `<option value="${esc(c.id)}" ${c.id === draft.cuentaDestino ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}</select>
         <span class="hint">Mover dinero entre tus cuentas o pagar tu tarjeta no cuenta como gasto ni como ingreso.</span></label>`;
@@ -187,6 +203,7 @@ export function abrirFormulario({ tipo = 'entrada', mov = null, preset = null } 
   f.addEventListener('change', (ev) => {
     sucio = true;
     if (ev.target.name === 'formaPago') formaManual = true;
+    if (ev.target.name === 'origen') { leer(); pintarExtra(); pintarPreview(); return; }
     // Al cambiar la cuenta, la forma de pago la sigue (efectivo, tarjeta...), salvo que el usuario la haya elegido
     if (ev.target.name === 'cuenta' && !formaManual) {
       draft.formaPago = formaDeCuenta(getEstado().cuentas.find((c) => c.id === ev.target.value), draft.tipo);

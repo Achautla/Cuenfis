@@ -16,15 +16,38 @@ export function redondeoSat(x) {
   return r2(n - ent) <= 0.5 ? ent : ent + 1;
 }
 
+/** Domingo de Pascua (algoritmo gregoriano anónimo). */
+function pascua(y) {
+  const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31), dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(Date.UTC(y, mes - 1, dia));
+}
+const iso = (d) => d.toISOString().slice(0, 10);
+/** n-ésimo lunes de un mes (1 = primero). */
+const lunes = (y, mes, n) => { const d = new Date(Date.UTC(y, mes - 1, 1)); d.setUTCDate(1 + ((8 - d.getUTCDay()) % 7) + (n - 1) * 7); return iso(d); };
+
+/**
+ * Días inhábiles para el SAT en un año (art. 12 CFF y art. 74 LFT), más el jueves y viernes santos,
+ * que el SAT suele declarar como periodo vacacional (regla 2.1.6 de la RMF). Estimado: la RMF de cada año puede cambiarlos.
+ */
+export function diasInhabiles(y) {
+  const p = pascua(y);
+  const santo = (n) => iso(new Date(p.getTime() - n * 864e5));
+  return new Set([`${y}-01-01`, lunes(y, 2, 1), lunes(y, 3, 3), santo(3), santo(2), `${y}-05-01`, `${y}-09-16`, lunes(y, 11, 3), `${y}-12-25`,
+    ...((y - 2024) % 6 === 0 ? [`${y}-10-01`] : [])]);
+}
+
 /**
  * Fecha límite de la declaración mensual de `clave` (AAAA-MM): el día que marca la ley del mes siguiente.
- * Si cae en sábado o domingo se recorre al siguiente día hábil (art. 12 CFF). Los días festivos no se consideran.
+ * Si cae en sábado, domingo o día inhábil se recorre al siguiente día hábil (art. 12 CFF).
  */
 export function fechaLimiteMensual(clave) {
   const [y, m] = clave.split('-').map(Number);
   const d = new Date(Date.UTC(y, m, params(y + (m === 12 ? 1 : 0)).diaLimiteMensual ?? 17));
-  while (d.getUTCDay() === 0 || d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() + 1);
-  return d.toISOString().slice(0, 10);
+  while (d.getUTCDay() === 0 || d.getUTCDay() === 6 || diasInhabiles(d.getUTCFullYear()).has(iso(d))) d.setUTCDate(d.getUTCDate() + 1);
+  return iso(d);
 }
 
 /** Tasa RESICO mensual según el total del mes (se aplica a todo el ingreso). */
