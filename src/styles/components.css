@@ -77,6 +77,21 @@ th { text-align: left; font-size: 12px; font-weight: 600; color: var(--ink-3); t
 td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
 td.n, th.n { text-align: right; }
 
+/* En celular, las tablas de 3 o más columnas se leen como tarjetas: "etiqueta ... valor" (ver ui/tablas.js) */
+@media (max-width: 600px) {
+  .table-wrap:has(> table.apilable) { overflow: visible; margin: 0; }
+  table.apilable thead { display: none; }
+  .table-wrap > table.apilable, table.apilable tbody, table.apilable tfoot, table.apilable tr { display: block; width: 100%; min-width: 0; }
+  table.apilable tr { padding: 10px 2px; border-bottom: 1px solid var(--line); }
+  table.apilable tfoot tr { background: var(--surface-2); border-radius: var(--r-sm); padding: 10px 8px; margin-top: 6px; font-weight: 600; }
+  table.apilable :is(td, tfoot th) { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 3px 0; border: 0; text-align: right; }
+  table.apilable :is(td, tfoot th)::before { content: attr(data-label); flex: none; max-width: 55%; text-align: left; font-size: 13px; font-weight: 400; color: var(--ink-3); }
+  table.apilable :is(td, tfoot th):empty { display: none; }
+  table.apilable tfoot th { text-transform: none; letter-spacing: 0; white-space: normal; color: var(--ink); font-size: 14px; }
+  table.apilable.con-titulo :is(td, th):first-child { display: block; text-align: left; font-weight: 600; font-size: 15px; padding-bottom: 4px; }
+  table.apilable.con-titulo :is(td, th):first-child::before { content: none; }
+}
+
 /* Estados */
 .empty { text-align: center; padding: 28px 16px; color: var(--ink-3); display: grid; gap: 10px; justify-items: center; }
 .empty svg.i { width: 32px; height: 32px; color: var(--line-2); }

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icono de Cuenfis para la barra de notificaciones: la "C" con la palomita, en blanco
+     (Android lo pinta del color de la notificación). Mismo trazo que public/icons/icon.svg. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="40"
+    android:viewportHeight="40">
+    <group android:translateX="-11" android:translateY="-12">
+        <path
+            android:pathData="M44,21.5A15,15 0,1 0,44 42.5"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="6"
+            android:strokeLineCap="round" />
+        <path
+            android:pathData="M27,32.5l4.5,4.5L40,27"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>
