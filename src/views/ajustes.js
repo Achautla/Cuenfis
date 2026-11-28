@@ -3,7 +3,7 @@ import { REGIMENES, TIPOS_CUENTA, categoria } from '../data/catalogo.js';
 import { confirmar } from '../ui/confirmar.js';
 import { version } from '../../package.json';
 import * as nube from '../data/nube.js';
-import { nuevoId } from '../data/acciones.js';
+import { nuevoId, problemaRespaldo } from '../data/acciones.js';
 import { datosDemo } from '../data/demo.js';
 import { icon } from '../ui/icons.js';
 import * as sonidos from '../ui/sonidos.js';
@@ -176,8 +176,10 @@ export function render(main) {
   $('#exp', main).onclick = () => descargar(`cuenfis-respaldo-${hoyISO()}.json`, JSON.stringify(getEstado(), null, 2), 'application/json');
   $('#imp', main).onchange = async (ev) => {
     let data;
-    try { data = JSON.parse(await ev.target.files[0].text()); if (!data.perfil || !Array.isArray(data.movimientos)) throw new Error(); }
+    try { data = JSON.parse(await ev.target.files[0].text()); }
     catch { toast('No pudimos leer ese archivo. Elige un respaldo de Cuenfis (.json).', icon('alert')); ev.target.value = ''; return; }
+    const problema = problemaRespaldo(data);
+    if (problema) { toast(`Ese respaldo no se puede usar: ${problema}. Tus datos no cambiaron.`, icon('alert')); ev.target.value = ''; return; }
     const ok = await confirmar({ titulo: '¿Restaurar este respaldo?', accion: 'Reemplazar mis datos',
       efectos: [`Trae ${data.movimientos.length} movimiento(s) de ${data.perfil.nombre || 'un perfil sin nombre'}.`, `Reemplaza todo lo que tienes ahora (${e.movimientos.length} movimiento(s)). Descarga antes un respaldo si lo quieres conservar.`] });
     ev.target.value = '';

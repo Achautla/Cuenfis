@@ -210,7 +210,7 @@ export function render(main) {
   });
   $('#borrarNube', main)?.addEventListener('click', async () => {
     if (!(await confirmar({ titulo: '¿Borrar tus datos de la nube?', accion: 'Borrar de la nube', escribir: 'BORRAR',
-      efectos: ['Se borra tu información guardada en la nube. Los datos de este dispositivo se quedan.', 'Tus otros dispositivos ya no podrán sincronizar hasta que vuelvas a guardar.', 'No se puede deshacer.'] }))) return;
+      efectos: ['Se borra tu información guardada en la nube, sus versiones anteriores y los acuses que subiste. Los datos de este dispositivo se quedan.', 'Tus otros dispositivos ya no podrán sincronizar hasta que vuelvas a guardar.', 'No se puede deshacer.'] }))) return;
     try { await nube.borrarNube(); toast('Datos de la nube borrados', icon('trash')); } catch (e) { toast(e.message, icon('alert')); }
     render(main);
   });

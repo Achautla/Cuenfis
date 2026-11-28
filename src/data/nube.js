@@ -137,7 +137,20 @@ export async function borrarNube() {
   if (error) throw new Error(mensaje(error));
   // Las copias anteriores también (requiere la política de la migración 20261130000000; sin ella no se borra nada y se sigue)
   await sb.from('espacios_historial').delete().eq('user_id', usuario.id).then(() => {}, () => {});
+  // Y los acuses guardados: "borrar la nube" debe dejar la nube vacía
+  await borrarAcusesDelUsuario();
   guardarMeta({});
+}
+
+/** Borra todos los acuses del usuario en el bucket, de 1000 en 1000. */
+async function borrarAcusesDelUsuario() {
+  for (let vuelta = 0; vuelta < 20; vuelta++) {
+    const { data: archivos, error } = await sb.storage.from('acuses').list(usuario.id, { limit: 1000 });
+    if (error) throw new Error(mensaje(error));
+    if (!archivos?.length) return;
+    const { error: e2 } = await sb.storage.from('acuses').remove(archivos.map((a) => `${usuario.id}/${a.name}`));
+    if (e2) throw new Error(mensaje(e2));
+  }
 }
 
 /* ---------- Acuses en Storage ---------- */
@@ -174,8 +187,7 @@ export async function registrarConsentimiento(version) {
 
 /** Elimina la cuenta: primero los acuses del bucket, luego el usuario (y en cascada todo lo demás). */
 export async function eliminarCuenta() {
-  const { data: archivos } = await sb.storage.from('acuses').list(usuario.id, { limit: 1000 });
-  if (archivos?.length) await sb.storage.from('acuses').remove(archivos.map((a) => `${usuario.id}/${a.name}`));
+  await borrarAcusesDelUsuario();
   const { error } = await sb.rpc('eliminar_mi_cuenta');
   if (error) throw new Error(mensaje(error));
   await sb.auth.signOut({ scope: 'local' }).catch(() => {});
