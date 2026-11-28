@@ -60,14 +60,14 @@ function validar(b: Record<string, unknown>): string | null {
   if (!ms.every((m) => m && (m.role === 'user' || m.role === 'assistant') && (typeof m.content === 'string' || Array.isArray(m.content)))) return 'mensajes';
   if (ms[0].role !== 'user' || ms.at(-1).role !== 'user') return 'orden';
   // Solo los bloques que usa la app: texto e imagen del usuario, resultados de herramientas en texto,
-  // y texto o llamadas a herramientas del asistente. Cada resultado debe responder a una llamada del turno anterior.
+  // y texto, razonamiento o llamadas a herramientas del asistente (tal como los devolvió la API). Cada resultado debe responder a una llamada del turno anterior.
   for (let i = 0; i < ms.length; i++) {
     const m = ms[i];
     if (typeof m.content === 'string') { if (m.content.length > 20_000) return 'mensajes'; continue; }
     const previas = new Set((Array.isArray(ms[i - 1]?.content) ? ms[i - 1].content : []).filter((b) => b?.type === 'tool_use').map((b) => b.id));
     for (const b of m.content) {
       const t = b?.type;
-      if (m.role === 'assistant' ? !['text', 'tool_use'].includes(t) : !['text', 'image', 'tool_result'].includes(t)) return 'bloque';
+      if (m.role === 'assistant' ? !['text', 'tool_use', 'thinking', 'redacted_thinking'].includes(t) : !['text', 'image', 'tool_result'].includes(t)) return 'bloque';
       if (t === 'tool_result' && (typeof b.content !== 'string' || b.content.length > 50_000 || !previas.has(b.tool_use_id))) return 'bloque';
       if (t === 'text' && (typeof b.text !== 'string' || b.text.length > 20_000)) return 'mensajes';
     }
